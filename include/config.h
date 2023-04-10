@@ -5,34 +5,33 @@
 
 #pragma once
 
+#define HAVE_GSTACK 0
+
+#define HAVE_GTK3 1
+
+#define HAVE_GTK4 0
+
 #define HAVE_LIBEVDEV_DISABLE_PROPERTY 0
 
-#define HAVE_LIBWACOM 0
+#define HAVE_LIBSYSTEMD 0
 
-#define HAVE_LOCALE_H 1 
+#define HAVE_LIBWACOM 1
 
-#ifndef __MUSL__
-#undef HAVE_VERSIONSORT
-#else
+#define HAVE_LOCALE_H 1
+
 #define HAVE_VERSIONSORT 1
-#endif
-#define HTTP_DOC_LINK "https://wayland.freedesktop.org/libinput/doc/latest"
+
+#define HTTP_DOC_LINK "https://wayland.freedesktop.org/libinput/doc/1.19.4"
 
 #define LIBINPUT_QUIRKS_DIR "/usr/share/libinput"
 
 #define LIBINPUT_QUIRKS_OVERRIDE_FILE "/etc/libinput/local-overrides.quirks"
 
-#undef NDEBUG
-#define LIBINPUT_TOOL_PATH ""
 #define LIBINPUT_QUIRKS_SRCDIR ""
-#define MESON_BUILD_ROOT ""
-#ifndef static_assert
-# ifdef _Static_assert
-#  define static_assert(cond, msg) _Static_assert(cond, msg)
-# else
-#  define static_assert(cond, msg)
-# endif
-#endif
 
-#define index strchr
-#define ffs __builtin_ffs
+#define LIBINPUT_TOOL_PATH ""
+
+#define MESON_BUILD_ROOT ""
+
+#define _GNU_SOURCE 1
+

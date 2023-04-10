@@ -5,7 +5,7 @@ Trackpoints and Pointing Sticks
 ==============================================================================
 
 This page provides an overview of trackpoint handling in libinput, also
-refered to as Pointing Stick or Trackstick. The device itself is usually a
+referred to as Pointing Stick or Trackstick. The device itself is usually a
 round plastic stick between the G, H and B keys with a set of buttons below
 the space bar.
 
@@ -50,7 +50,7 @@ decreases, the delta decrease first, then the reporting rate until the
 trackpoint is in a neutral state and no events are reported. Trackpoint data
 is hard to generalize, see
 `Observations on trackpoint input data
-<a href="https://who-t.blogspot.com/2018/06/observations-on-trackpoint-input-data.html">`_
+<https://who-t.blogspot.com/2018/06/observations-on-trackpoint-input-data.html>`_
 for more details.
 
 .. figure:: trackpoint-delta-illustration.svg
