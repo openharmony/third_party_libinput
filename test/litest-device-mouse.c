@@ -39,7 +39,6 @@ static int events[] = {
 	EV_REL, REL_X,
 	EV_REL, REL_Y,
 	EV_REL, REL_WHEEL,
-	EV_REL, REL_WHEEL_HI_RES,
 	-1 , -1,
 };
 

@@ -128,9 +128,7 @@ device_added(struct udev_device *udev_device,
 			 sysname,
 			 devnode);
 		return 0;
-	}
-
-	if (device == NULL) {
+	} else if (device == NULL) {
 		log_info(&input->base,
 			 "%-7s - failed to create input device '%s'\n",
 			 sysname,
@@ -149,13 +147,13 @@ device_added(struct udev_device *udev_device,
 static void
 device_removed(struct udev_device *udev_device, struct udev_input *input)
 {
-	struct evdev_device *device;
+	struct evdev_device *device, *next;
 	struct udev_seat *seat;
 	const char *syspath;
 
 	syspath = udev_device_get_syspath(udev_device);
 	list_for_each(seat, &input->base.seat_list, base.link) {
-		list_for_each_safe(device,
+		list_for_each_safe(device, next,
 				   &seat->base.devices_list, base.link) {
 			if (streq(syspath,
 				  udev_device_get_syspath(device->udev_device))) {
@@ -184,7 +182,7 @@ udev_input_add_devices(struct udev_input *input, struct udev *udev)
 			continue;
 
 		sysname = udev_device_get_sysname(device);
-		if (!strneq("event", sysname, 5)) {
+		if (strncmp("event", sysname, 5) != 0) {
 			udev_device_unref(device);
 			continue;
 		}
@@ -228,7 +226,7 @@ evdev_udev_handler(void *data)
 	if (!action)
 		goto out;
 
-	if (!strneq("event", udev_device_get_sysname(udev_device), 5))
+	if (strncmp("event", udev_device_get_sysname(udev_device), 5) != 0)
 		goto out;
 
 	if (streq(action, "add"))
@@ -243,12 +241,12 @@ out:
 static void
 udev_input_remove_devices(struct udev_input *input)
 {
-	struct evdev_device *device;
-	struct udev_seat *seat;
+	struct evdev_device *device, *next;
+	struct udev_seat *seat, *tmp;
 
-	list_for_each_safe(seat, &input->base.seat_list, base.link) {
+	list_for_each_safe(seat, tmp, &input->base.seat_list, base.link) {
 		libinput_seat_ref(&seat->base);
-		list_for_each_safe(device,
+		list_for_each_safe(device, next,
 				   &seat->base.devices_list, base.link) {
 			evdev_device_remove(device);
 		}
@@ -289,11 +287,8 @@ udev_input_enable(struct libinput *libinput)
 		return -1;
 	}
 
-	if (udev_monitor_filter_add_match_subsystem_devtype(
-				input->udev_monitor, "input", NULL)) {
-		log_info(libinput, "udev: failed to set up filter\n");
-		return -1;
-	}
+	udev_monitor_filter_add_match_subsystem_devtype(input->udev_monitor,
+			"input", NULL);
 
 	if (udev_monitor_enable_receiving(input->udev_monitor)) {
 		log_info(libinput, "udev: failed to bind the udev monitor\n");

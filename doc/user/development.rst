@@ -36,7 +36,6 @@ Topics below explain some behaviors of libinput.
    normalization-of-relative-motion.rst
    seats.rst
    timestamps.rst
-   wheel-api.rst
 
 .. _hacking_on_libinput:
 

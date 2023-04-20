@@ -69,9 +69,7 @@ ratelimit_test(struct ratelimit *r)
 		r->begin = utime;
 		r->num = 1;
 		return RATELIMIT_PASS;
-	}
-
-	if (r->num < r->burst) {
+	} else if (r->num < r->burst) {
 		/* continue burst */
 		return (++r->num == r->burst) ? RATELIMIT_THRESHOLD
 					      : RATELIMIT_PASS;

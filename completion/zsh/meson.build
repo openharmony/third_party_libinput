@@ -1,6 +1,6 @@
 zshcompletiondir = get_option('zshcompletiondir')
 if zshcompletiondir == ''
-		zshcompletiondir = get_option('datadir') / 'zsh' / 'site-functions'
+		zshcompletiondir = join_paths(get_option('datadir'), 'zsh', 'site-functions')
 endif
 
 if zshcompletiondir != 'no'
