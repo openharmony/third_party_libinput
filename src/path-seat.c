@@ -49,12 +49,13 @@ static const char default_seat[] = "seat0";
 static const char default_seat_name[] = "default";
 
 static void
-path_disable_device(struct evdev_device *device)
+path_disable_device(struct libinput *libinput,
+		    struct evdev_device *device)
 {
 	struct libinput_seat *seat = device->base.seat;
-	struct evdev_device *dev;
+	struct evdev_device *dev, *next;
 
-	list_for_each_safe(dev,
+	list_for_each_safe(dev, next,
 			   &seat->devices_list, base.link) {
 		if (dev != device)
 			continue;
@@ -68,14 +69,14 @@ static void
 path_input_disable(struct libinput *libinput)
 {
 	struct path_input *input = (struct path_input*)libinput;
-	struct path_seat *seat;
-	struct evdev_device *device;
+	struct path_seat *seat, *tmp;
+	struct evdev_device *device, *next;
 
-	list_for_each_safe(seat, &input->base.seat_list, base.link) {
+	list_for_each_safe(seat, tmp, &input->base.seat_list, base.link) {
 		libinput_seat_ref(&seat->base);
-		list_for_each_safe(device,
+		list_for_each_safe(device, next,
 				   &seat->base.devices_list, base.link)
-			path_disable_device(device);
+			path_disable_device(libinput, device);
 		libinput_seat_unref(&seat->base);
 	}
 }
@@ -139,7 +140,7 @@ path_seat_get_for_device(struct path_input *input,
 		seat_logical_name = safe_strdup(seat_logical_name_override);
 	} else {
 		seat_prop = udev_device_get_property_value(udev_device, "WL_SEAT");
-		seat_logical_name = safe_strdup(seat_prop ? seat_prop : default_seat_name);
+		seat_logical_name = strdup(seat_prop ? seat_prop : default_seat_name);
 	}
 
 	if (!seat_logical_name) {
@@ -241,11 +242,11 @@ static void
 path_input_destroy(struct libinput *input)
 {
 	struct path_input *path_input = (struct path_input*)input;
-	struct path_device *dev;
+	struct path_device *dev, *tmp;
 
 	udev_unref(path_input->udev);
 
-	list_for_each_safe(dev, &path_input->path_list, link)
+	list_for_each_safe(dev, tmp, &path_input->path_list, link)
 		path_device_destroy(dev);
 
 }
@@ -414,7 +415,7 @@ libinput_path_remove_device(struct libinput_device *device)
 		return;
 	}
 
-	list_for_each_safe(dev, &input->path_list, link) {
+	list_for_each(dev, &input->path_list, link) {
 		if (dev->udev_device == evdev->udev_device) {
 			path_device_destroy(dev);
 			break;
@@ -423,6 +424,6 @@ libinput_path_remove_device(struct libinput_device *device)
 
 	seat = device->seat;
 	libinput_seat_ref(seat);
-	path_disable_device(evdev);
+	path_disable_device(libinput, evdev);
 	libinput_seat_unref(seat);
 }

@@ -77,25 +77,13 @@ START_TEST(trackpoint_scroll)
 	litest_drain_events(li);
 
 	litest_button_scroll(dev, BTN_MIDDLE, 1, 6);
-	litest_assert_scroll(li,
-			     LIBINPUT_EVENT_POINTER_SCROLL_CONTINUOUS,
-			     LIBINPUT_POINTER_AXIS_SCROLL_VERTICAL,
-			     6);
+	litest_assert_scroll(li, LIBINPUT_POINTER_AXIS_SCROLL_VERTICAL, 6);
 	litest_button_scroll(dev, BTN_MIDDLE, 1, -7);
-	litest_assert_scroll(li,
-			     LIBINPUT_EVENT_POINTER_SCROLL_CONTINUOUS,
-			     LIBINPUT_POINTER_AXIS_SCROLL_VERTICAL,
-			     -7);
+	litest_assert_scroll(li, LIBINPUT_POINTER_AXIS_SCROLL_VERTICAL, -7);
 	litest_button_scroll(dev, BTN_MIDDLE, 8, 1);
-	litest_assert_scroll(li,
-			     LIBINPUT_EVENT_POINTER_SCROLL_CONTINUOUS,
-			     LIBINPUT_POINTER_AXIS_SCROLL_HORIZONTAL,
-			     8);
+	litest_assert_scroll(li, LIBINPUT_POINTER_AXIS_SCROLL_HORIZONTAL, 8);
 	litest_button_scroll(dev, BTN_MIDDLE, -9, 1);
-	litest_assert_scroll(li,
-			     LIBINPUT_EVENT_POINTER_SCROLL_CONTINUOUS,
-			     LIBINPUT_POINTER_AXIS_SCROLL_HORIZONTAL,
-			     -9);
+	litest_assert_scroll(li, LIBINPUT_POINTER_AXIS_SCROLL_HORIZONTAL, -9);
 
 	/* scroll smaller than the threshold should not generate axis events */
 	litest_button_scroll(dev, BTN_MIDDLE, 1, 1);
@@ -159,7 +147,7 @@ START_TEST(trackpoint_scroll_source)
 	while ((event = libinput_get_event(li))) {
 		ptrev = libinput_event_get_pointer_event(event);
 
-		ck_assert_int_eq(litest_event_pointer_get_axis_source(ptrev),
+		ck_assert_int_eq(libinput_event_pointer_get_axis_source(ptrev),
 				 LIBINPUT_POINTER_AXIS_SOURCE_CONTINUOUS);
 
 		libinput_event_destroy(event);
@@ -175,8 +163,6 @@ START_TEST(trackpoint_topsoftbuttons_left_handed_trackpoint)
 	enum libinput_config_status status;
 	struct libinput_event *event;
 	struct libinput_device *device;
-
-	litest_disable_hold_gestures(touchpad->libinput_device);
 
 	trackpoint = litest_add_device(li, LITEST_TRACKPOINT);
 	litest_drain_events(li);
@@ -221,8 +207,6 @@ START_TEST(trackpoint_topsoftbuttons_left_handed_touchpad)
 	struct libinput_event *event;
 	struct libinput_device *device;
 
-	litest_disable_hold_gestures(touchpad->libinput_device);
-
 	trackpoint = litest_add_device(li, LITEST_TRACKPOINT);
 	litest_drain_events(li);
 	/* touchpad left-handed, trackpoint right-handed */
@@ -263,8 +247,6 @@ START_TEST(trackpoint_topsoftbuttons_left_handed_both)
 	enum libinput_config_status status;
 	struct libinput_event *event;
 	struct libinput_device *device;
-
-	litest_disable_hold_gestures(touchpad->libinput_device);
 
 	trackpoint = litest_add_device(li, LITEST_TRACKPOINT);
 	litest_drain_events(li);
@@ -311,7 +293,6 @@ START_TEST(trackpoint_palmdetect)
 	int i;
 
 	touchpad = litest_add_device(li, LITEST_SYNAPTICS_I2C);
-	litest_disable_hold_gestures(touchpad->libinput_device);
 	litest_drain_events(li);
 
 	for (i = 0; i < 10; i++) {
@@ -347,7 +328,6 @@ START_TEST(trackpoint_palmdetect_resume_touch)
 	int i;
 
 	touchpad = litest_add_device(li, LITEST_SYNAPTICS_I2C);
-	litest_disable_hold_gestures(touchpad->libinput_device);
 	litest_drain_events(li);
 
 	for (i = 0; i < 10; i++) {
@@ -381,7 +361,6 @@ START_TEST(trackpoint_palmdetect_require_min_events)
 	struct libinput *li = trackpoint->libinput;
 
 	touchpad = litest_add_device(li, LITEST_SYNAPTICS_I2C);
-	litest_disable_hold_gestures(touchpad->libinput_device);
 	litest_drain_events(li);
 
 	/* A single event does not trigger palm detection */
@@ -407,7 +386,6 @@ START_TEST(trackpoint_palmdetect_require_min_events_timeout)
 	struct libinput *li = trackpoint->libinput;
 
 	touchpad = litest_add_device(li, LITEST_SYNAPTICS_I2C);
-	litest_disable_hold_gestures(touchpad->libinput_device);
 	litest_drain_events(li);
 
 	for (int i = 0; i < 10; i++) {
@@ -432,16 +410,16 @@ END_TEST
 
 TEST_COLLECTION(trackpoint)
 {
-	litest_add(trackpoint_middlebutton, LITEST_POINTINGSTICK, LITEST_ANY);
-	litest_add(trackpoint_middlebutton_noscroll, LITEST_POINTINGSTICK, LITEST_ANY);
-	litest_add(trackpoint_scroll, LITEST_POINTINGSTICK, LITEST_ANY);
-	litest_add(trackpoint_scroll_source, LITEST_POINTINGSTICK, LITEST_ANY);
-	litest_add(trackpoint_topsoftbuttons_left_handed_trackpoint, LITEST_TOPBUTTONPAD, LITEST_ANY);
-	litest_add(trackpoint_topsoftbuttons_left_handed_touchpad, LITEST_TOPBUTTONPAD, LITEST_ANY);
-	litest_add(trackpoint_topsoftbuttons_left_handed_both, LITEST_TOPBUTTONPAD, LITEST_ANY);
+	litest_add("trackpoint:middlebutton", trackpoint_middlebutton, LITEST_POINTINGSTICK, LITEST_ANY);
+	litest_add("trackpoint:middlebutton", trackpoint_middlebutton_noscroll, LITEST_POINTINGSTICK, LITEST_ANY);
+	litest_add("trackpoint:scroll", trackpoint_scroll, LITEST_POINTINGSTICK, LITEST_ANY);
+	litest_add("trackpoint:scroll", trackpoint_scroll_source, LITEST_POINTINGSTICK, LITEST_ANY);
+	litest_add("trackpoint:left-handed", trackpoint_topsoftbuttons_left_handed_trackpoint, LITEST_TOPBUTTONPAD, LITEST_ANY);
+	litest_add("trackpoint:left-handed", trackpoint_topsoftbuttons_left_handed_touchpad, LITEST_TOPBUTTONPAD, LITEST_ANY);
+	litest_add("trackpoint:left-handed", trackpoint_topsoftbuttons_left_handed_both, LITEST_TOPBUTTONPAD, LITEST_ANY);
 
-	litest_add(trackpoint_palmdetect, LITEST_POINTINGSTICK, LITEST_ANY);
-	litest_add(trackpoint_palmdetect_resume_touch, LITEST_POINTINGSTICK, LITEST_ANY);
-	litest_add(trackpoint_palmdetect_require_min_events, LITEST_POINTINGSTICK, LITEST_ANY);
-	litest_add(trackpoint_palmdetect_require_min_events_timeout, LITEST_POINTINGSTICK, LITEST_ANY);
+	litest_add("trackpoint:palmdetect", trackpoint_palmdetect, LITEST_POINTINGSTICK, LITEST_ANY);
+	litest_add("trackpoint:palmdetect", trackpoint_palmdetect_resume_touch, LITEST_POINTINGSTICK, LITEST_ANY);
+	litest_add("trackpoint:palmdetect", trackpoint_palmdetect_require_min_events, LITEST_POINTINGSTICK, LITEST_ANY);
+	litest_add("trackpoint:palmdetect", trackpoint_palmdetect_require_min_events_timeout, LITEST_POINTINGSTICK, LITEST_ANY);
 }

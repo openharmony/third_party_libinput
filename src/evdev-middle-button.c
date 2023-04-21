@@ -32,7 +32,7 @@
 /*****************************************
  * BEFORE YOU EDIT THIS FILE, look at the state diagram in
  * doc/middle-button-emulation-state-machine.svg (generated with
- * https://www.diagrams.net).
+ * https://draw.io).
  *
  * Any changes in this file must be represented in the diagram.
  *
