@@ -11,7 +11,7 @@
     "scripts": {},
     "licensePath": "COPYING",
     "component": {
-        "name": "thirdparty_libinput",
+        "name": "libinput",
         "subsystem": "thirdparty",
         "syscap": [],
         "features": [],

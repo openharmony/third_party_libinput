@@ -81,7 +81,7 @@ ohos_shared_library("libinput-third") {
     "//third_party/mtdev:libmtdev",
   ]
 
-  part_name = "multimodalinput_base"
+  part_name = "libinput"
 }
 ## Build libinput-third.so }}}
 
@@ -113,7 +113,7 @@ ohos_executable("libinput-debug") {
     "//third_party/mtdev:libmtdev",
   ]
 
-  part_name = "multimodalinput_base"
+  part_name = "libinput"
 }
 
 ohos_executable("libinput-list") {
@@ -143,7 +143,7 @@ ohos_executable("libinput-list") {
     "//third_party/mtdev:libmtdev",
   ]
 
-  part_name = "multimodalinput_base"
+  part_name = "libinput"
 }
 
 ohos_executable("libinput-tablet") {
@@ -173,5 +173,5 @@ ohos_executable("libinput-tablet") {
     "//third_party/mtdev:libmtdev",
   ]
 
-  part_name = "multimodalinput_base"
+  part_name = "libinput"
 }
