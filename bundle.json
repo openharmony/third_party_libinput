@@ -20,7 +20,11 @@
         "ram": "",
         "deps": {
             "components": [],
-            "third_party": []
+            "third_party": [
+              "eudev",
+              "libevdev",
+              "mtdev"
+            ]
         },
         "build": {
             "sub_component": [],
