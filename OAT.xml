@@ -70,6 +70,8 @@ Note:If the text contains special characters, please escape them according to th
             <filefilter name="defaultPolicyFilter" desc="Filters for compatibility，license header policies">
                 <filteritem type="filename" name="README.OpenSource"/>
                 <filteritem type="filename" name="README"/>
+                <filteritem type="filename" name="COPYING" desc="三方开源，不需检测文件头是否遗漏版权声明"/>
+                <filteritem type="filepath" name="test/libinput-test-suite.man" desc="三方开源，不需检测文件头是否遗漏版权声明"/>
                 <filteritem type="filepath" name="doc/.*" desc="未使用"/>
                 <filteritem type="filepath" name="include/valgrind/valgrind.h" desc="该文件遵从BSD-style，未使用GPLStyle部分协议代码"/>
             </filefilter>
