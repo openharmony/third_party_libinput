@@ -6764,10 +6764,10 @@ diff -Naur old/udev/libinput-device-group.c new/udev/libinput-device-group.c
  		}
 diff -Naur old/src/evdev-privacy-switch.c new/src/evdev-privacy-switch.c
 --- old/src/evdev-privacy-switch.c	2021-01-01 00:00:00.000000000 +0000
-+++ new/src/evdev-privacy-switch.c	2021-01-01 00:00:00.000000000 +0000
-@@ -0,0 +1,308 @@
++++ new/src/evdev-privacy-switch.c	2024-04-29 00:00:00.000000000 +0000
+@@ -0,0 +1,300 @@
 +/*
-+ * Copyright (c) 2021-2024 Huawei Device Co., Ltd.
++ * Copyright (c) 2024 Huawei Device Co., Ltd.
 + * Licensed under the Apache License, Version 2.0 (the "License");
 + * you may not use this file except in compliance with the License.
 + * You may obtain a copy of the License at
@@ -6790,12 +6790,21 @@ diff -Naur old/src/evdev-privacy-switch.c new/src/evdev-privacy-switch.c
 +#include "libinput.h"
 +#include "libinput-util.h"
 +
++struct privacy_switch_dispatch {
++	struct evdev_dispatch base;
++	struct evdev_device* device;
++	uint64_t time;
++	uint32_t mask;
++	struct privacy_switch ev_switch;
++	struct {
++		struct libinput_device_config_send_events config;
++		enum libinput_config_send_events_mode current_mode;
++	} sendevents;
++};
++
 +static inline struct
 +privacy_switch_dispatch* get_privacy_switch_dispatch(struct evdev_dispatch* dispatch)
 +{
-+    if (dispatch == NULL) {
-+        return NULL;
-+    }
 +    evdev_verify_dispatch_type(dispatch, DISPATCH_PRIVACY_SWITCH);
 +
 +    struct privacy_switch_dispatch* pSwitchDispatch = NULL;
@@ -6813,22 +6822,17 @@ diff -Naur old/src/evdev-privacy-switch.c new/src/evdev-privacy-switch.c
 +    }
 +    pSwitchDispatch->mask = 1;
 +    pSwitchDispatch->ev_switch.time = time;
-+    if (event->code == SW_LID) {
-+        pSwitchDispatch->ev_switch.sw = LIBINPUT_SWITCH_LID;
-+    } else if (event->code == SW_TABLET_MODE) {
-+        pSwitchDispatch->ev_switch.sw = LIBINPUT_SWITCH_TABLET_MODE;
-+    } else {
-+        pSwitchDispatch->ev_switch.sw = LIBINPUT_SWITCH_PRIVACY;
-+    }
++    pSwitchDispatch->ev_switch.sw = LIBINPUT_SWITCH_PRIVACY;
 +
-+	if (event->value) {
++
++    if (event->value == 1) {
 +        pSwitchDispatch->ev_switch.state = LIBINPUT_SWITCH_STATE_ON;
 +    } else {
 +        pSwitchDispatch->ev_switch.state = LIBINPUT_SWITCH_STATE_OFF;
 +    }
 +}
 +
-+static void privacy_switch_reset_mask(struct privacy_switch_dispatch* pSwitchDispatch)
++static inline void privacy_switch_reset_mask(struct privacy_switch_dispatch* pSwitchDispatch)
 +{
 +	pSwitchDispatch->mask = 0;
 +}
@@ -6868,17 +6872,6 @@ diff -Naur old/src/evdev-privacy-switch.c new/src/evdev-privacy-switch.c
 +        privacy_switch_flush(pSwitchDispatch, device, time);
 +    }
 +    break;
-+    case EV_MSC:
-+    case EV_ABS:
-+    case EV_REL:
-+    case EV_LED:
-+    case EV_SND:
-+    case EV_REP:
-+    case EV_FF:
-+    case EV_PWR:
-+    case EV_FF_STATUS:
-+    case EV_MAX:
-+    case EV_CNT:
 +    default:
 +        libinput_log_printf("unsupported privacy_switch event type: %d, devname: %s.\n", event->type, device->devname);
 +    break;
@@ -6903,19 +6896,18 @@ diff -Naur old/src/evdev-privacy-switch.c new/src/evdev-privacy-switch.c
 +privacy_switch_device_added(struct evdev_device* device,
 +    struct evdev_device* added_device)
 +{
-+    if (device == NULL || added_device == NULL) {
++    if (device == NULL || added_device == NULL || device->dispatch == NULL) {
 +        return;
 +    }
 +    struct privacy_switch_dispatch* privacy_switch_dispatch = get_privacy_switch_dispatch(device->dispatch);
 +    if (privacy_switch_dispatch == NULL) {
 +        return;
 +    }
-+
-+    bool is_privacy_switch = false;
 +    if (libinput_device_get_device_group(&device->base) !=
 +        libinput_device_get_device_group(&added_device->base)) {
 +        return;
 +    }
++    bool is_privacy_switch = false;
 +    is_privacy_switch = evdev_device_has_capability(added_device,
 +        LIBINPUT_DEVICE_CAP_SWITCH);
 +
@@ -7034,7 +7026,7 @@ diff -Naur old/src/evdev-privacy-switch.c new/src/evdev-privacy-switch.c
 +    return LIBINPUT_CONFIG_SEND_EVENTS_ENABLED;
 +}
 +
-+bool
++static bool
 +privacy_switch_init(struct privacy_switch_dispatch* pSwitch, struct evdev_device* device)
 +{
 +    if (pSwitch == NULL || device == NULL) {
@@ -7055,10 +7047,10 @@ diff -Naur old/src/evdev-privacy-switch.c new/src/evdev-privacy-switch.c
 +        return NULL;
 +    }
 +
-+    struct privacy_switch_dispatch* privacySwitch = {0};
++    struct privacy_switch_dispatch* privacySwitch = NULL;
 +    privacySwitch = zalloc(sizeof * privacySwitch);
 +
-+    if (privacy_switch_init(privacySwitch, device) != true) {
++    if (!privacy_switch_init(privacySwitch, device)) {
 +        privacy_switch_destroy(&privacySwitch->base);
 +        privacySwitch = NULL;
 +        return NULL;
@@ -7076,10 +7068,10 @@ diff -Naur old/src/evdev-privacy-switch.c new/src/evdev-privacy-switch.c
 +
 diff -Naur old/src/evdev-privacy-switch.h new/src/evdev-privacy-switch.h
 --- old/src/evdev-privacy-switch.h	2021-01-01 00:00:00.000000000 +0000
-+++ new/src/evdev-privacy-switch.h	2021-01-01 00:00:00.000000000 +0000
-@@ -0,0 +1,42 @@
++++ new/src/evdev-privacy-switch.h	2024-04-29 00:00:00.000000000 +0000
+@@ -0,0 +1,29 @@
 +/*
-+ * Copyright (c) 2021-2024 Huawei Device Co., Ltd.
++ * Copyright (c) 2024 Huawei Device Co., Ltd.
 + * Licensed under the Apache License, Version 2.0 (the "License");
 + * you may not use this file except in compliance with the License.
 + * You may obtain a copy of the License at
@@ -7102,20 +7094,7 @@ diff -Naur old/src/evdev-privacy-switch.h new/src/evdev-privacy-switch.h
 +	uint64_t time;
 +	enum libinput_switch sw;
 +	enum libinput_switch_state state;
-+} ;
-+
-+struct privacy_switch_dispatch {
-+	struct evdev_dispatch base;
-+	struct evdev_device* device;
-+	uint64_t time;
-+	uint32_t mask;
-+	struct privacy_switch ev_switch;
-+	struct {
-+		struct libinput_device_config_send_events config;
-+		enum libinput_config_send_events_mode current_mode;
-+	} sendevents;
 +};
-+
 +
 +struct evdev_dispatch* evdev_privacy_switch_create(struct evdev_device* device);
 +
