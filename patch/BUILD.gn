@@ -38,6 +38,7 @@ action("apply_patch") {
     "$gen_dst_dir/src/evdev-fallback.c",
     "$gen_dst_dir/src/evdev-totem.c",
     "$gen_dst_dir/src/evdev-joystick.c",
+    "$gen_dst_dir/src/evdev-privacy-switch.c",
     "$gen_dst_dir/src/evdev-middle-button.c",
     "$gen_dst_dir/src/evdev-mt-touchpad.c",
     "$gen_dst_dir/src/evdev-mt-touchpad-tap.c",
