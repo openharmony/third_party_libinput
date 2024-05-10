@@ -6606,6 +6606,15 @@ diff -Naur old/src/util-strings.h new/src/util-strings.h
  
  	for (pair = pairs; *pair; pair++) {
  		char **kv = strv_from_string(*pair, kv_separator);
+@@ -415,7 +415,7 @@
+ 		return strdup(str);
+ 
+ 	size_t slen = min(strlen(str), 512);
+-	char *sanitized = zalloc(2 * slen + 1);
++	char *sanitized = (char *)zalloc(2 * slen + 1);
+ 	const char *src = str;
+ 	char *dst = sanitized;
+ 
 diff -Naur old/src/util-time.h new/src/util-time.h
 --- old/src/util-time.h	2021-01-01 00:00:00.000000000 +0000
 +++ new/src/util-time.h	2021-01-01 00:00:00.000000000 +0000
