@@ -2850,7 +2850,11 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	if (!tp->buttons.has_topbuttons && height > 55) {
 -		/* top edge is 5% of the height */
 -		mm.y = height * 0.05;
+<<<<<<< Updated upstream
 +		/* top edge is 0.1% of the height */
+=======
++		/* top edge is 5mm of the height */
+>>>>>>> Stashed changes
 +		mm.y = 5;
  		edges = evdev_device_mm_to_units(device, &mm);
  		tp->palm.upper_edge = edges.y;
