@@ -2837,21 +2837,21 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  
 -	/* palm edges are 8% of the width on each side */
 -	mm.x = min(8, width * 0.08);
-+	/* palm edges are 0.1% of the width on each side */
-+	mm.x = min(8, width * 0.001);
++	/* palm edges are 5mm of the width on each side */
++	mm.x = 5;
  	edges = evdev_device_mm_to_units(device, &mm);
  	tp->palm.left_edge = edges.x;
  
 -	mm.x = width - min(8, width * 0.08);
-+	mm.x = width - min(8, width * 0.001);
++	mm.x = width - 5;
  	edges = evdev_device_mm_to_units(device, &mm);
  	tp->palm.right_edge = edges.x;
  
  	if (!tp->buttons.has_topbuttons && height > 55) {
 -		/* top edge is 5% of the height */
 -		mm.y = height * 0.05;
-+		/* top edge is 0.1% of the height */
-+		mm.y = height * 0.001;
++		/* top edge is 5mm of the height */
++		mm.y = 5;
  		edges = evdev_device_mm_to_units(device, &mm);
  		tp->palm.upper_edge = edges.y;
  	}
