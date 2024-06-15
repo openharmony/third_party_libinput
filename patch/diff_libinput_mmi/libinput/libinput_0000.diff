@@ -2123,6 +2123,18 @@ diff -Naur old/src/evdev-joystick.h new/src/evdev-joystick.h
 diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons.c
 --- old/src/evdev-mt-touchpad-buttons.c	2021-01-01 00:00:00.000000000 +0000
 +++ new/src/evdev-mt-touchpad-buttons.c	2021-01-01 00:00:00.000000000 +0000
+@@ -635,9 +635,9 @@
+ 	/* button height: 10mm or 15% or the touchpad height,
+ 	   whichever is smaller */
+ 	if (height * 0.15 > 10)
+-		mm.y = height - 10;
++		mm.y = height - 18;
+ 	else
+-		mm.y = height * 0.85;
++		mm.y = height * 0.78;
+ 
+ 	mm.x = width * 0.5;
+ 	edges = evdev_device_mm_to_units(device, &mm);
 @@ -1202,10 +1202,11 @@
  			return 0;
  	}
