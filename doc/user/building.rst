@@ -55,7 +55,7 @@ process below.  A successful build requires the
 
      $> git clone https://gitlab.freedesktop.org/libinput/libinput
      $> cd libinput
-     $> meson --prefix=/usr builddir/
+     $> meson setup --prefix=/usr builddir/
      $> ninja -C builddir/
      $> sudo ninja -C builddir/ install
 
@@ -71,7 +71,7 @@ Additional options may also be specified. For example:
 
 ::
 
-     $> meson --prefix=/usr -Ddocumentation=false builddir/
+     $> meson setup --prefix=/usr -Ddocumentation=false builddir/
 
 
 We recommend that users disable the documentation, it's not usually required
@@ -96,7 +96,7 @@ again:
 ::
 
      $> rm -r builddir/
-     $> meson --prefix=....
+     $> meson setup --prefix=....
 
 
 .. _verifying_install:
@@ -189,7 +189,7 @@ running meson.
 
 .. hint:: The build dependencies for some distributions can be found in the
 	`GitLab Continuous Integration file <https://gitlab.freedesktop.org/libinput/libinput/blob/main/.gitlab-ci.yml>`_.
-	Search for **FEDORA_RPMS** in the **variables:** definition
+	Search for **FEDORA_PACKAGES** in the **variables:** definition
 	and check the list for an entry for your distribution.
 
 In most cases, it is sufficient to install the dependencies that your
@@ -242,7 +242,7 @@ available options. The default build enables most options and thus requires
 more build dependencies. On systems where build dependencies are an issue,
 options may be disabled with this meson command: ::
 
-    meson --prefix=/usr -Dsomefeature=false builddir
+    meson setup --prefix=/usr -Dsomefeature=false builddir
 
 Where ``-Dsomefeature=false`` may be one of:
 

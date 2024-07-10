@@ -169,6 +169,12 @@ START_TEST(touchpad_1fg_clickfinger_no_touch)
 	struct litest_device *dev = litest_current_device();
 	struct libinput *li = dev->libinput;
 
+	if (dev->which == LITEST_SYNAPTICS_PHANTOMCLICKS) {
+		/* The XPS 15 9500 touchpad has the ModelTouchpadPhantomClicks
+		 * quirk enabled and doesn't generate events without touches. */
+		return;
+	}
+
 	litest_enable_clickfinger(dev);
 
 	litest_drain_events(li);
@@ -184,6 +190,26 @@ START_TEST(touchpad_1fg_clickfinger_no_touch)
 				   LIBINPUT_BUTTON_STATE_PRESSED);
 	litest_assert_button_event(li, BTN_LEFT,
 				   LIBINPUT_BUTTON_STATE_RELEASED);
+}
+END_TEST
+
+START_TEST(touchpad_1fg_clickfinger_no_touch_phantomclicks)
+{
+	struct litest_device *dev = litest_current_device();
+	struct libinput *li = dev->libinput;
+
+	litest_enable_clickfinger(dev);
+
+	litest_drain_events(li);
+
+	litest_event(dev, EV_KEY, BTN_LEFT, 1);
+	litest_event(dev, EV_SYN, SYN_REPORT, 0);
+	litest_event(dev, EV_KEY, BTN_LEFT, 0);
+	litest_event(dev, EV_SYN, SYN_REPORT, 0);
+
+	libinput_dispatch(li);
+
+	litest_assert_empty_queue(li);
 }
 END_TEST
 
@@ -1410,7 +1436,7 @@ START_TEST(clickpad_softbutton_left_2nd_fg_move)
 	litest_assert_empty_queue(li);
 
 	litest_touch_down(dev, 1, 20, 20);
-	litest_touch_move_to(dev, 1, 20, 20, 80, 20, 10);
+	litest_touch_move_to(dev, 1, 20, 20, 80, 20, 15);
 
 	libinput_dispatch(li);
 	event = libinput_get_event(li);
@@ -1441,7 +1467,7 @@ START_TEST(clickpad_softbutton_left_2nd_fg_move)
 
 	/* second finger down */
 	litest_touch_down(dev, 1, 20, 20);
-	litest_touch_move_to(dev, 1, 20, 20, 20, 80, 10);
+	litest_touch_move_to(dev, 1, 20, 20, 20, 80, 15);
 
 	libinput_dispatch(li);
 	event = libinput_get_event(li);
@@ -1492,7 +1518,7 @@ START_TEST(clickpad_softbutton_left_to_right)
 	*/
 
 	litest_touch_down(dev, 0, 30, 90);
-	litest_touch_move_to(dev, 0, 30, 90, 90, 90, 10);
+	litest_touch_move_to(dev, 0, 30, 90, 90, 90, 15);
 	litest_drain_events(li);
 
 	litest_event(dev, EV_KEY, BTN_LEFT, 1);
@@ -1528,7 +1554,7 @@ START_TEST(clickpad_softbutton_right_to_left)
 	*/
 
 	litest_touch_down(dev, 0, 80, 90);
-	litest_touch_move_to(dev, 0, 80, 90, 30, 90, 10);
+	litest_touch_move_to(dev, 0, 80, 90, 30, 90, 15);
 	litest_drain_events(li);
 
 	litest_event(dev, EV_KEY, BTN_LEFT, 1);
@@ -2098,29 +2124,6 @@ START_TEST(touchpad_non_clickpad_detection)
 }
 END_TEST
 
-START_TEST(touchpad_clickpad_detection)
-{
-	struct litest_device *dev;
-	uint32_t methods;
-	int codes[] = {
-		INPUT_PROP_MAX, INPUT_PROP_BUTTONPAD,
-		-1, -1,
-	};
-
-	/* Create a device with LR buttons and INPUT_PROP_BUTTONPAD set - we
-	 * should ignore the property and assume it's a non-clickpad.
-	 * Only way to check that is to verify no click methods are set.
-	 */
-	dev = litest_create_device_with_overrides(LITEST_SYNAPTICS_TOUCHPAD,
-						  "litest Fake Clickpad",
-						  NULL, NULL, codes);
-
-	methods = libinput_device_config_click_get_methods(dev->libinput_device);
-	ck_assert(methods == 0);
-	litest_delete_device(dev);
-}
-END_TEST
-
 TEST_COLLECTION(touchpad_buttons)
 {
 	struct range finger_count = {1, 4};
@@ -2152,6 +2155,8 @@ TEST_COLLECTION(touchpad_buttons)
 	litest_add_for_device(touchpad_clickfinger_appletouch_1fg, LITEST_APPLETOUCH);
 	litest_add_for_device(touchpad_clickfinger_appletouch_2fg, LITEST_APPLETOUCH);
 	litest_add_for_device(touchpad_clickfinger_appletouch_3fg, LITEST_APPLETOUCH);
+
+	litest_add_for_device(touchpad_1fg_clickfinger_no_touch_phantomclicks, LITEST_SYNAPTICS_PHANTOMCLICKS);
 
 	litest_add_ranged(touchpad_clickfinger_click_drag, LITEST_CLICKPAD, LITEST_ANY, &finger_count);
 
@@ -2191,6 +2196,5 @@ TEST_COLLECTION(touchpad_buttons)
 	litest_add(clickpad_middleemulation_click_enable_while_down, LITEST_CLICKPAD, LITEST_ANY);
 	litest_add(clickpad_middleemulation_click_disable_while_down, LITEST_CLICKPAD, LITEST_ANY);
 
-	litest_add_no_device(touchpad_clickpad_detection);
 	litest_add_no_device(touchpad_non_clickpad_detection);
 }

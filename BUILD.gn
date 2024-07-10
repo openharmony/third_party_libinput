@@ -39,7 +39,9 @@ ohos_shared_library("libinput-third") {
     "src/evdev-tablet-pad.c",
     "src/evdev-tablet.c",
     "src/evdev-totem.c",
+    "src/evdev-wheel.c",
     "src/evdev.c",
+    "src/filter-custom.c",
     "src/filter-flat.c",
     "src/filter-low-dpi.c",
     "src/filter-mouse.c",
@@ -47,6 +49,7 @@ ohos_shared_library("libinput-third") {
     "src/filter-touchpad-flat.c",
     "src/filter-touchpad-x230.c",
     "src/filter-touchpad.c",
+    "src/filter-trackpoint-flat.c",
     "src/filter-trackpoint.c",
     "src/filter.c",
     "src/libinput.c",
@@ -59,7 +62,7 @@ ohos_shared_library("libinput-third") {
     "src/util-ratelimit.c",
     "src/util-strings.c",
 
-    #    "src/libinput-util.c",
+    #"src/libinput-util.c",
   ]
 
   configs = [ ":libinput-third_config" ]

@@ -183,7 +183,7 @@ START_TEST(pad_button_intuos)
 	unsigned int expected_number = 0;
 	struct libinput_event *ev;
 	struct libinput_event_tablet_pad *pev;
-	unsigned int count;
+	unsigned int count = 0;
 
 	/* Intuos button mapping is sequential up from BTN_0 and continues
 	 * with BTN_A */
@@ -243,7 +243,7 @@ START_TEST(pad_button_bamboo)
 	unsigned int expected_number = 0;
 	struct libinput_event *ev;
 	struct libinput_event_tablet_pad *pev;
-	unsigned int count;
+	unsigned int count = 0;
 
 	if (!libevdev_has_event_code(dev->evdev, EV_KEY, BTN_LEFT))
 		return;
@@ -331,7 +331,6 @@ START_TEST(pad_button_mode_groups)
 	struct litest_device *dev = litest_current_device();
 	struct libinput *li = dev->libinput;
 	unsigned int code;
-	unsigned int expected_number = 0;
 	struct libinput_event *ev;
 	struct libinput_event_tablet_pad *pev;
 
@@ -381,8 +380,6 @@ START_TEST(pad_button_mode_groups)
 		index = libinput_tablet_pad_mode_group_get_index(group);
 		ck_assert_int_eq(index, 0);
 		libinput_event_destroy(ev);
-
-		expected_number++;
 	}
 
 	litest_assert_empty_queue(li);
@@ -621,13 +618,19 @@ START_TEST(pad_no_left_handed)
 	struct libinput_device *device = dev->libinput_device;
 	enum libinput_config_status status;
 
+	/* Without libwacom we default to left-handed being available */
+#if HAVE_LIBWACOM
 	ck_assert(!libinput_device_config_left_handed_is_available(device));
+#else
+	ck_assert(libinput_device_config_left_handed_is_available(device));
+#endif
 
 	ck_assert_int_eq(libinput_device_config_left_handed_get_default(device),
 			 0);
 	ck_assert_int_eq(libinput_device_config_left_handed_get(device),
 			 0);
 
+#if HAVE_LIBWACOM
 	status = libinput_device_config_left_handed_set(dev->libinput_device, 1);
 	ck_assert_int_eq(status, LIBINPUT_CONFIG_STATUS_UNSUPPORTED);
 
@@ -643,6 +646,7 @@ START_TEST(pad_no_left_handed)
 			 0);
 	ck_assert_int_eq(libinput_device_config_left_handed_get_default(device),
 			 0);
+#endif
 }
 END_TEST
 

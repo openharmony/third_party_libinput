@@ -5,33 +5,61 @@
 
 #pragma once
 
+#define HAVE_DEBUG_GUI 1
+
 #define HAVE_GSTACK 0
 
 #define HAVE_GTK3 1
 
 #define HAVE_GTK4 0
 
-#define HAVE_LIBEVDEV_DISABLE_PROPERTY 0
+#define HAVE_GTK_WAYLAND 1
+
+#define HAVE_GTK_X11 1
+
+#define HAVE_INSTALLED_TESTS 0
+
+#define HAVE_LIBEVDEV_DISABLE_PROPERTY 1
 
 #define HAVE_LIBSYSTEMD 0
 
-#define HAVE_LIBWACOM 1
+#define HAVE_LIBWACOM 0
 
 #define HAVE_LOCALE_H 1
 
+#ifndef __MUSL__
+#undef HAVE_VERSIONSORT
+#else
 #define HAVE_VERSIONSORT 1
+#endif
 
-#define HTTP_DOC_LINK "https://wayland.freedesktop.org/libinput/doc/1.19.4"
+#define HTTP_DOC_LINK "https://wayland.freedesktop.org/libinput/doc/1.25.0"
 
-#define LIBINPUT_QUIRKS_DIR "/usr/share/libinput"
+#define LIBINPUT_QUIRKS_DIR "/etc/libinput/quirks"
 
-#define LIBINPUT_QUIRKS_OVERRIDE_FILE "/etc/libinput/local-overrides.quirks"
+#define LIBINPUT_QUIRKS_OVERRIDE_FILE "/etc/libinput/quirks/local-overrides.quirks"
 
-#define LIBINPUT_QUIRKS_SRCDIR ""
+#define LIBINPUT_QUIRKS_SRCDIR "/etc/libinput/quirks"
 
-#define LIBINPUT_TOOL_PATH ""
+#define LIBINPUT_TOOL_PATH "/data/libinput"
 
-#define MESON_BUILD_ROOT ""
+#define MESON_BUILD_ROOT "/data/libinput"
 
 #define _GNU_SOURCE 1
 
+#undef NDEBUG
+#ifndef static_assert
+# ifdef _Static_assert
+#  define static_assert(cond, msg) _Static_assert(cond, msg)
+# else
+#  define static_assert(cond, msg)
+# endif
+#endif
+
+#define index strchr
+#define ffs __builtin_ffs
+
+#ifdef HAVE_LIBINPUT_LOG_ENABLE
+#define _LIBINPUT_LOG_DIR "/data/log/libinput"
+#define _LIBINPUT_LOG_PATH "/data/log/libinput/libinput.log"
+#endif

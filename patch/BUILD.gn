@@ -24,6 +24,7 @@ action("apply_patch") {
   inputs = [ "$gen_src_dir" ]
   outputs = [
     "$gen_dst_dir/src/filter.c",
+    "$gen_dst_dir/src/filter-custom.c",
     "$gen_dst_dir/src/filter-flat.c",
     "$gen_dst_dir/src/filter-low-dpi.c",
     "$gen_dst_dir/src/filter-mouse.c",
@@ -32,6 +33,7 @@ action("apply_patch") {
     "$gen_dst_dir/src/filter-tablet.c",
     "$gen_dst_dir/src/filter-trackpoint.c",
     "$gen_dst_dir/src/filter-touchpad-flat.c",
+    "$gen_dst_dir/src/filter-trackpoint-flat.c",
     "$gen_dst_dir/src/libinput.c",
     "$gen_dst_dir/src/evdev.c",
     "$gen_dst_dir/src/evdev-debounce.c",
@@ -49,6 +51,7 @@ action("apply_patch") {
     "$gen_dst_dir/src/evdev-tablet.c",
     "$gen_dst_dir/src/evdev-tablet-pad.c",
     "$gen_dst_dir/src/evdev-tablet-pad-leds.c",
+    "$gen_dst_dir/src/evdev-wheel.c",
     "$gen_dst_dir/src/path-seat.c",
     "$gen_dst_dir/src/timer.c",
     "$gen_dst_dir/src/libinput-util.c",

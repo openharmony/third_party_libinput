@@ -143,6 +143,8 @@ xvasprintf(char **strp, const char *fmt, va_list args)
 static inline bool
 safe_atoi_base(const char *str, int *val, int base)
 {
+	assert(str != NULL);
+
 	char *endptr;
 	long v;
 
@@ -167,12 +169,15 @@ safe_atoi_base(const char *str, int *val, int base)
 static inline bool
 safe_atoi(const char *str, int *val)
 {
+	assert(str != NULL);
 	return safe_atoi_base(str, val, 10);
 }
 
 static inline bool
 safe_atou_base(const char *str, unsigned int *val, int base)
 {
+	assert(str != NULL);
+
 	char *endptr;
 	unsigned long v;
 
@@ -197,12 +202,15 @@ safe_atou_base(const char *str, unsigned int *val, int base)
 static inline bool
 safe_atou(const char *str, unsigned int *val)
 {
+	assert(str != NULL);
 	return safe_atou_base(str, val, 10);
 }
 
 static inline bool
 safe_atod(const char *str, double *val)
 {
+	assert(str != NULL);
+
 	char *endptr;
 	double v;
 #ifdef HAVE_LOCALE_H
@@ -255,7 +263,7 @@ safe_atod(const char *str, double *val)
 }
 
 char **strv_from_argv(int argc, char **argv);
-char **strv_from_string(const char *in, const char *separator);
+char **strv_from_string(const char *in, const char *separator, size_t *num_elements);
 char *strv_join(char **strv, const char *joiner);
 
 static inline void
@@ -272,6 +280,51 @@ strv_free(char **strv) {
 	}
 
 	free (strv);
+}
+
+/**
+ * parse a string containing a list of doubles into a double array.
+ *
+ * @param in string to parse
+ * @param separator string used to separate double in list e.g. ","
+ * @param result double array
+ * @param length length of double array
+ * @return true when parsed successfully otherwise false
+ */
+static inline double *
+double_array_from_string(const char *in,
+			 const char *separator,
+			 size_t *length)
+{
+	assert(in != NULL);
+	assert(separator != NULL);
+	assert(length != NULL);
+
+	double *result = NULL;
+	*length = 0;
+
+	size_t nelem;
+	char **strv = strv_from_string(in, separator, &nelem);
+	if (!strv)
+		return result;
+
+	double *numv = zalloc(sizeof(double) * nelem);
+	for (size_t idx = 0; idx < nelem; idx++) {
+		double val;
+		if (!safe_atod(strv[idx], &val))
+			goto out;
+
+		numv[idx] = val;
+	}
+
+	result = numv;
+	numv = NULL;
+	*length = nelem;
+
+out:
+	strv_free(strv);
+	free(numv);
+	return result;
 }
 
 struct key_value_str{
@@ -291,33 +344,26 @@ kv_double_from_string(const char *string,
 		      struct key_value_double **result_out)
 
 {
-	char **pairs;
-	char **pair;
 	struct key_value_double *result = NULL;
-	ssize_t npairs = 0;
-	unsigned int idx = 0;
 
 	if (!pair_separator || pair_separator[0] == '\0' ||
 	    !kv_separator || kv_separator[0] == '\0')
 		return -1;
 
-	pairs = strv_from_string(string, pair_separator);
-	if (!pairs)
-		return -1;
-
-	for (pair = pairs; *pair; pair++)
-		npairs++;
-
-	if (npairs == 0)
+	size_t npairs;
+	char **pairs = strv_from_string(string, pair_separator, &npairs);
+	if (!pairs || npairs == 0)
 		goto error;
 
 	result = zalloc(npairs * sizeof *result);
 
-	for (pair = pairs; *pair; pair++) {
-		char **kv = strv_from_string(*pair, kv_separator);
+	for (size_t idx = 0; idx < npairs; idx++) {
+		char *pair = pairs[idx];
+		size_t nelem;
+		char **kv = strv_from_string(pair, kv_separator, &nelem);
 		double k, v;
 
-		if (!kv || !kv[0] || !kv[1] || kv[2] ||
+		if (!kv || nelem != 2 ||
 		    !safe_atod(kv[0], &k) ||
 		    !safe_atod(kv[1], &v)) {
 			strv_free(kv);
@@ -326,7 +372,6 @@ kv_double_from_string(const char *string,
 
 		result[idx].key = k;
 		result[idx].value = v;
-		idx++;
 
 		strv_free(kv);
 	}
@@ -353,6 +398,8 @@ error:
 static inline char *
 strstrip(const char *input, const char *what)
 {
+	assert(input != NULL);
+
 	char *str, *last;
 
 	str = safe_strdup(&input[strspn(input, what)]);
@@ -376,6 +423,9 @@ strstrip(const char *input, const char *what)
 static inline bool
 strendswith(const char *str, const char *suffix)
 {
+	if (str == NULL)
+		return false;
+
 	size_t slen = strlen(str);
 	size_t suffixlen = strlen(suffix);
 	size_t offset;
@@ -390,6 +440,9 @@ strendswith(const char *str, const char *suffix)
 static inline bool
 strstartswith(const char *str, const char *prefix)
 {
+	if (str == NULL)
+		return false;
+
 	size_t prefixlen = strlen(prefix);
 
 	return prefixlen > 0 ? strneq(str, prefix, strlen(prefix)) : false;

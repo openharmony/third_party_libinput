@@ -39,6 +39,7 @@
 
 #include "shared.h"
 #include "util-macros.h"
+#include "util-input-event.h"
 
 static volatile sig_atomic_t stop = 0;
 static struct tools_options options;
@@ -149,7 +150,7 @@ normalize(struct libevdev *evdev, int code, int value)
 	if (!abs)
 		return 0.0;
 
-	return 1.0 * (value - abs->minimum)/(abs->maximum - abs->minimum + 1);
+	return 1.0 * (value - abs->minimum)/absinfo_range(abs);
 }
 
 static int
@@ -307,7 +308,6 @@ handle_tablet_button_event(struct context *ctx, struct libinput_event *ev)
 {
 	struct libinput_event_tablet_tool *t = libinput_event_get_tablet_tool_event(ev);
 	unsigned int button = libinput_event_tablet_tool_get_button(t);
-	unsigned int *btn;
 	enum libinput_button_state state = libinput_event_tablet_tool_get_button_state(t);
 
 	ARRAY_FOR_EACH(ctx->buttons_down, btn) {

@@ -53,18 +53,18 @@
 #define DEFAULT_BUTTON_SCROLL_TIMEOUT ms2us(200)
 
 enum evdev_device_udev_tags {
-        EVDEV_UDEV_TAG_INPUT		= bit(0),
-        EVDEV_UDEV_TAG_KEYBOARD		= bit(1),
-        EVDEV_UDEV_TAG_MOUSE		= bit(2),
-        EVDEV_UDEV_TAG_TOUCHPAD		= bit(3),
-        EVDEV_UDEV_TAG_TOUCHSCREEN	= bit(4),
-        EVDEV_UDEV_TAG_TABLET		= bit(5),
-        EVDEV_UDEV_TAG_JOYSTICK		= bit(6),
-        EVDEV_UDEV_TAG_ACCELEROMETER	= bit(7),
-        EVDEV_UDEV_TAG_TABLET_PAD	= bit(8),
-        EVDEV_UDEV_TAG_POINTINGSTICK	= bit(9),
-        EVDEV_UDEV_TAG_TRACKBALL	= bit(10),
-        EVDEV_UDEV_TAG_SWITCH		= bit(11),
+	EVDEV_UDEV_TAG_INPUT		= bit(0),
+	EVDEV_UDEV_TAG_KEYBOARD		= bit(1),
+	EVDEV_UDEV_TAG_MOUSE		= bit(2),
+	EVDEV_UDEV_TAG_TOUCHPAD		= bit(3),
+	EVDEV_UDEV_TAG_TOUCHSCREEN	= bit(4),
+	EVDEV_UDEV_TAG_TABLET		= bit(5),
+	EVDEV_UDEV_TAG_JOYSTICK		= bit(6),
+	EVDEV_UDEV_TAG_ACCELEROMETER	= bit(7),
+	EVDEV_UDEV_TAG_TABLET_PAD	= bit(8),
+	EVDEV_UDEV_TAG_POINTINGSTICK	= bit(9),
+	EVDEV_UDEV_TAG_TRACKBALL	= bit(10),
+	EVDEV_UDEV_TAG_SWITCH		= bit(11),
 };
 
 struct evdev_udev_tag_match {
@@ -86,6 +86,19 @@ static const struct evdev_udev_tag_match evdev_udev_tag_matches[] = {
 	{"ID_INPUT_POINTINGSTICK",	EVDEV_UDEV_TAG_POINTINGSTICK},
 	{"ID_INPUT_TRACKBALL",		EVDEV_UDEV_TAG_TRACKBALL},
 	{"ID_INPUT_SWITCH",		EVDEV_UDEV_TAG_SWITCH},
+};
+
+static const unsigned int well_known_keyboard_keys[] = {
+	KEY_LEFTCTRL,
+	KEY_CAPSLOCK,
+	KEY_NUMLOCK,
+	KEY_INSERT,
+	KEY_MUTE,
+	KEY_CALC,
+	KEY_FILE,
+	KEY_MAIL,
+	KEY_PLAYPAUSE,
+	KEY_BRIGHTNESSDOWN,
 };
 
 static inline bool
@@ -116,14 +129,20 @@ evdev_update_key_down_count(struct evdev_device *device,
 			    int code,
 			    int pressed)
 {
-	int key_count;
+	int key_count = 0;
 	assert(code >= 0 && code < KEY_CNT);
 
 	if (pressed) {
 		key_count = ++device->key_count[code];
 	} else {
-		assert(device->key_count[code] > 0);
-		key_count = --device->key_count[code];
+		if (device->key_count[code] > 0) {
+			key_count = --device->key_count[code];
+		} else {
+			evdev_log_bug_libinput(device,
+					       "releasing key %s with count %d\n",
+					       libevdev_event_code_get_name(EV_KEY, code),
+					       device->key_count[code]);
+		}
 	}
 
 	if (key_count > 32) {
@@ -365,8 +384,7 @@ evdev_transform_relative(struct evdev_device *device,
 static inline double
 scale_axis(const struct input_absinfo *absinfo, double val, double to_range)
 {
-	return (val - absinfo->minimum) * to_range /
-		(absinfo->maximum - absinfo->minimum + 1);
+	return (val - absinfo->minimum) * to_range / absinfo_range(absinfo);
 }
 
 double
@@ -849,7 +867,6 @@ evdev_scroll_get_default_button_lock(struct libinput_device *device)
 	return LIBINPUT_CONFIG_SCROLL_BUTTON_LOCK_DISABLED;
 }
 
-
 void
 evdev_set_button_scroll_lock_enabled(struct evdev_device *device,
 				     bool enabled)
@@ -945,8 +962,7 @@ evdev_scroll_config_natural_get(struct libinput_device *device)
 static int
 evdev_scroll_config_natural_get_default(struct libinput_device *device)
 {
-	/* could enable this on Apple touchpads. could do that, could
-	 * very well do that... */
+	/* Overridden in evdev-mt-touchpad.c for Apple touchpads. */
 	return 0;
 }
 
@@ -994,13 +1010,13 @@ evdev_read_switch_reliability_prop(struct evdev_device *device)
 	quirks = evdev_libinput_context(device)->quirks;
 	q = quirks_fetch_for_device(quirks, device->udev_device);
 	if (!q || !quirks_get_string(q, QUIRK_ATTR_LID_SWITCH_RELIABILITY, &prop)) {
-		r = RELIABILITY_UNKNOWN;
+		r = RELIABILITY_RELIABLE;
 	} else if (!parse_switch_reliability_property(prop, &r)) {
 		evdev_log_error(device,
 				"%s: switch reliability set to unknown value '%s'\n",
 				device->devname,
 				prop);
-		r = RELIABILITY_UNKNOWN;
+		r = RELIABILITY_RELIABLE;
 	} else if (r == RELIABILITY_WRITE_OPEN) {
 		evdev_log_info(device, "will write switch open events\n");
 	}
@@ -1010,6 +1026,7 @@ evdev_read_switch_reliability_prop(struct evdev_device *device)
 	return r;
 }
 
+LIBINPUT_UNUSED
 static inline void
 evdev_print_event(struct evdev_device *device,
 		  const struct input_event *e)
@@ -1113,7 +1130,7 @@ evdev_note_time_delay(struct evdev_device *device,
 		return;
 
 	tdelta = us2ms(libinput->dispatch_time - eventtime);
-	if (tdelta > 10) {
+	if (tdelta > 20) {
 		evdev_log_bug_client_ratelimit(device,
 					       &device->delay_warning_limit,
 					       "event processing lagging behind by %dms, your system is too slow\n",
@@ -1172,17 +1189,25 @@ static inline bool
 evdev_init_accel(struct evdev_device *device,
 		 enum libinput_config_accel_profile which)
 {
-	struct motion_filter *filter;
+	struct motion_filter *filter = NULL;
 
-	if (which == LIBINPUT_CONFIG_ACCEL_PROFILE_FLAT)
-		filter = create_pointer_accelerator_filter_flat(device->dpi);
-	else if (device->tags & EVDEV_TAG_TRACKPOINT)
-		filter = create_pointer_accelerator_filter_trackpoint(device->trackpoint_multiplier,
-								      device->use_velocity_averaging);
-	else if (device->dpi < DEFAULT_MOUSE_DPI)
-		filter = create_pointer_accelerator_filter_linear_low_dpi(device->dpi,
-									  device->use_velocity_averaging);
-	else
+	if (which == LIBINPUT_CONFIG_ACCEL_PROFILE_CUSTOM)
+		filter = create_custom_accelerator_filter();
+	else if (device->tags & EVDEV_TAG_TRACKPOINT) {
+		if (which == LIBINPUT_CONFIG_ACCEL_PROFILE_FLAT)
+			filter = create_pointer_accelerator_filter_trackpoint_flat(device->trackpoint_multiplier);
+		else
+			filter = create_pointer_accelerator_filter_trackpoint(device->trackpoint_multiplier,
+									      device->use_velocity_averaging);
+	} else {
+		if (which == LIBINPUT_CONFIG_ACCEL_PROFILE_FLAT)
+			filter = create_pointer_accelerator_filter_flat(device->dpi);
+		else if (device->dpi < DEFAULT_MOUSE_DPI)
+			filter = create_pointer_accelerator_filter_linear_low_dpi(device->dpi,
+										  device->use_velocity_averaging);
+	}
+
+	if (!filter)
 		filter = create_pointer_accelerator_filter_linear(device->dpi,
 								  device->use_velocity_averaging);
 
@@ -1236,7 +1261,8 @@ evdev_accel_config_get_profiles(struct libinput_device *libinput_device)
 		return LIBINPUT_CONFIG_ACCEL_PROFILE_NONE;
 
 	return LIBINPUT_CONFIG_ACCEL_PROFILE_ADAPTIVE |
-		LIBINPUT_CONFIG_ACCEL_PROFILE_FLAT;
+	       LIBINPUT_CONFIG_ACCEL_PROFILE_FLAT |
+	       LIBINPUT_CONFIG_ACCEL_PROFILE_CUSTOM;
 }
 
 static enum libinput_config_status
@@ -1285,6 +1311,20 @@ evdev_accel_config_get_default_profile(struct libinput_device *libinput_device)
 	return LIBINPUT_CONFIG_ACCEL_PROFILE_ADAPTIVE;
 }
 
+static enum libinput_config_status
+evdev_set_accel_config(struct libinput_device *libinput_device,
+		       struct libinput_config_accel *accel_config)
+{
+	assert(evdev_accel_config_get_profile(libinput_device) == accel_config->profile);
+
+	struct evdev_device *dev = evdev_device(libinput_device);
+
+	if (!filter_set_accel_config(dev->pointer.filter, accel_config))
+		return LIBINPUT_CONFIG_STATUS_INVALID;
+
+	return LIBINPUT_CONFIG_STATUS_SUCCESS;
+}
+
 void
 evdev_device_init_pointer_acceleration(struct evdev_device *device,
 				       struct motion_filter *filter)
@@ -1302,6 +1342,7 @@ evdev_device_init_pointer_acceleration(struct evdev_device *device,
 		device->pointer.config.set_profile = evdev_accel_config_set_profile;
 		device->pointer.config.get_profile = evdev_accel_config_get_profile;
 		device->pointer.config.get_default_profile = evdev_accel_config_get_default_profile;
+		device->pointer.config.set_accel_config = evdev_set_accel_config;
 		device->base.config.accel = &device->pointer.config;
 
 		default_speed = evdev_accel_config_get_default_speed(&device->base);
@@ -1637,8 +1678,8 @@ evdev_fix_abs_resolution(struct evdev_device *device,
 	 */
 	if (!evdev_read_attr_res_prop(device, &xres, &yres) &&
 	    evdev_read_attr_size_prop(device, &widthmm, &heightmm)) {
-		xres = (absx->maximum - absx->minimum)/widthmm;
-		yres = (absy->maximum - absy->minimum)/heightmm;
+		xres = absinfo_range(absx)/widthmm;
+		yres = absinfo_range(absy)/heightmm;
 	}
 
 	/* libevdev_set_abs_resolution() changes the absinfo we already
@@ -1807,10 +1848,8 @@ evdev_extract_abs_axes(struct evdev_device *device,
 
 	device->abs.absinfo_x = libevdev_get_abs_info(evdev, ABS_X);
 	device->abs.absinfo_y = libevdev_get_abs_info(evdev, ABS_Y);
-	device->abs.dimensions.x = abs(device->abs.absinfo_x->maximum -
-				       device->abs.absinfo_x->minimum);
-	device->abs.dimensions.y = abs(device->abs.absinfo_y->maximum -
-				       device->abs.absinfo_y->minimum);
+	device->abs.dimensions.x = abs((int)absinfo_range(device->abs.absinfo_x));
+	device->abs.dimensions.y = abs((int)absinfo_range(device->abs.absinfo_y));
 
 	if (evdev_is_fake_mt_device(device) ||
 	    !libevdev_has_event_code(evdev, EV_ABS, ABS_MT_POSITION_X) ||
@@ -1829,10 +1868,8 @@ evdev_extract_abs_axes(struct evdev_device *device,
 
 	device->abs.absinfo_x = libevdev_get_abs_info(evdev, ABS_MT_POSITION_X);
 	device->abs.absinfo_y = libevdev_get_abs_info(evdev, ABS_MT_POSITION_Y);
-	device->abs.dimensions.x = abs(device->abs.absinfo_x->maximum -
-				       device->abs.absinfo_x->minimum);
-	device->abs.dimensions.y = abs(device->abs.absinfo_y->maximum -
-				       device->abs.absinfo_y->minimum);
+	device->abs.dimensions.x = abs((int)absinfo_range(device->abs.absinfo_x));
+	device->abs.dimensions.y = abs((int)absinfo_range(device->abs.absinfo_y));
 	device->is_mt = 1;
 }
 
@@ -1848,6 +1885,84 @@ evdev_disable_accelerometer_axes(struct evdev_device *device)
 	libevdev_disable_event_code(evdev, EV_ABS, REL_X);
 	libevdev_disable_event_code(evdev, EV_ABS, REL_Y);
 	libevdev_disable_event_code(evdev, EV_ABS, REL_Z);
+}
+
+static bool
+evdev_device_is_joystick_or_gamepad(struct evdev_device *device)
+{
+	enum evdev_device_udev_tags udev_tags;
+	bool has_joystick_tags;
+	struct libevdev *evdev = device->evdev;
+	unsigned int code;
+
+	/* The EVDEV_UDEV_TAG_JOYSTICK is set when a joystick or gamepad button
+	 * is found. However, it can not be used to identify joysticks or
+	 * gamepads because there are keyboards that also have it. Even worse,
+	 * many joysticks also map KEY_* and thus are tagged as keyboards.
+	 *
+	 * In order to be able to detect joysticks and gamepads and
+	 * differentiate them from keyboards, apply the following rules:
+	 *
+	 *  1. The device is tagged as joystick but not as tablet
+	 *  2. The device doesn't have 4 well-known keyboard keys
+	 *  3. It has at least 2 joystick buttons
+	 *  4. It doesn't have 10 keyboard keys */
+
+	udev_tags = evdev_device_get_udev_tags(device, device->udev_device);
+	has_joystick_tags = (udev_tags & EVDEV_UDEV_TAG_JOYSTICK) &&
+			    !(udev_tags & EVDEV_UDEV_TAG_TABLET) &&
+			    !(udev_tags & EVDEV_UDEV_TAG_TABLET_PAD);
+
+	if (!has_joystick_tags)
+		return false;
+
+	unsigned int num_well_known_keys = 0;
+
+	for (size_t i = 0; i < ARRAY_LENGTH(well_known_keyboard_keys); i++) {
+		code = well_known_keyboard_keys[i];
+		if (libevdev_has_event_code(evdev, EV_KEY, code))
+			num_well_known_keys++;
+	}
+
+	if (num_well_known_keys >= 4) /* should not have 4 well-known keys */
+		return false;
+
+	unsigned int num_joystick_btns = 0;
+
+	for (code = BTN_JOYSTICK; code < BTN_DIGI; code++) {
+		if (libevdev_has_event_code(evdev, EV_KEY, code))
+			num_joystick_btns++;
+	}
+
+	for (code = BTN_TRIGGER_HAPPY; code <= BTN_TRIGGER_HAPPY40; code++) {
+		if (libevdev_has_event_code(evdev, EV_KEY, code))
+			num_joystick_btns++;
+	}
+
+	if (num_joystick_btns < 2) /* require at least 2 joystick buttons */
+		return false;
+
+	unsigned int num_keys = 0;
+
+	for (code = KEY_ESC; code <= KEY_MICMUTE; code++) {
+		if (libevdev_has_event_code(evdev, EV_KEY, code) )
+			num_keys++;
+	}
+
+	for (code = KEY_OK; code <= KEY_LIGHTS_TOGGLE; code++) {
+		if (libevdev_has_event_code(evdev, EV_KEY, code) )
+			num_keys++;
+	}
+
+	for (code = KEY_ALS_TOGGLE; code < BTN_TRIGGER_HAPPY; code++) {
+		if (libevdev_has_event_code(evdev, EV_KEY, code) )
+			num_keys++;
+	}
+
+	if (num_keys >= 10) /* should not have 10 keyboard keys */
+		return false;
+
+	return true;
 }
 
 static struct evdev_dispatch *
@@ -1893,9 +2008,9 @@ evdev_configure_device(struct evdev_device *device)
 		evdev_disable_accelerometer_axes(device);
 	}
 
-	if (udev_tags == (EVDEV_UDEV_TAG_INPUT|EVDEV_UDEV_TAG_JOYSTICK)) {
+	if (evdev_device_is_joystick_or_gamepad(device)) {
 		evdev_log_info(device,
-			       "device is a joystick, ignoring\n");
+			       "device is a joystick or a gamepad, ignoring\n");
 		return NULL;
 	}
 
@@ -1959,8 +2074,10 @@ evdev_configure_device(struct evdev_device *device)
 	    udev_tags & EVDEV_UDEV_TAG_POINTINGSTICK) {
 		evdev_tag_external_mouse(device, device->udev_device);
 		evdev_tag_trackpoint(device, device->udev_device);
-		device->dpi = evdev_read_dpi_prop(device);
-		device->trackpoint_multiplier = evdev_get_trackpoint_multiplier(device);
+		if (device->tags & EVDEV_TAG_TRACKPOINT)
+			device->trackpoint_multiplier = evdev_get_trackpoint_multiplier(device);
+		else
+			device->dpi = evdev_read_dpi_prop(device);
 		/* whether velocity should be averaged, false by default */
 		device->use_velocity_averaging = evdev_need_velocity_averaging(device);
 
@@ -2001,7 +2118,6 @@ evdev_configure_device(struct evdev_device *device)
 		if (libevdev_has_event_code(evdev, EV_SW, SW_LID)) {
 			device->seat_caps |= EVDEV_DEVICE_SWITCH;
 			device->tags |= EVDEV_TAG_LID_SWITCH;
-			evdev_log_info(device, "device is a switch device\n");
 		}
 
 		if (libevdev_has_event_code(evdev, EV_SW, SW_TABLET_MODE)) {
@@ -2135,8 +2251,6 @@ evdev_pre_configure_model_quirks(struct evdev_device *device)
 	struct quirks_context *quirks;
 	struct quirks *q;
 	const struct quirk_tuples *t;
-	const uint32_t *props = NULL;
-	size_t nprops = 0;
 	char *prop;
 
 	/* Touchpad claims to have 4 slots but only ever sends 2
@@ -2155,7 +2269,7 @@ evdev_pre_configure_model_quirks(struct evdev_device *device)
 		libevdev_disable_event_code(device->evdev, EV_MSC, MSC_TIMESTAMP);
 	}
 
-	if (quirks_get_tuples(q, QUIRK_ATTR_EVENT_CODE_ENABLE, &t)) {
+	if (quirks_get_tuples(q, QUIRK_ATTR_EVENT_CODE, &t)) {
 		for (size_t i = 0; i < t->ntuples; i++) {
 			const struct input_absinfo absinfo = {
 				.minimum = 0,
@@ -2164,16 +2278,27 @@ evdev_pre_configure_model_quirks(struct evdev_device *device)
 
 			int type = t->tuples[i].first;
 			int code = t->tuples[i].second;
+			bool enable = t->tuples[i].third;
 
-			if (code == EVENT_CODE_UNDEFINED)
-				libevdev_enable_event_type(device->evdev, type);
-			else
-				libevdev_enable_event_code(device->evdev,
-							    type,
-							    code,
-							    type == EV_ABS ?  &absinfo : NULL);
+			if (code == EVENT_CODE_UNDEFINED) {
+				if (enable)
+					libevdev_enable_event_type(device->evdev, type);
+				else
+					libevdev_disable_event_type(device->evdev, type);
+			} else {
+				if (enable)
+					libevdev_enable_event_code(device->evdev,
+								   type,
+								   code,
+								   type == EV_ABS ?  &absinfo : NULL);
+				else
+					libevdev_disable_event_code(device->evdev,
+								    type,
+								    code);
+			}
 			evdev_log_debug(device,
-					"quirks: enabling %s %s (%#x %#x)\n",
+					"quirks: %s %s %s (%#x %#x)\n",
+					enable ? "enabling" : "disabling",
 					libevdev_event_type_get_name(type),
 					libevdev_event_code_get_name(type, code),
 					type,
@@ -2181,58 +2306,28 @@ evdev_pre_configure_model_quirks(struct evdev_device *device)
 		}
 	}
 
-	if (quirks_get_tuples(q, QUIRK_ATTR_EVENT_CODE_DISABLE, &t)) {
-		for (size_t i = 0; i < t->ntuples; i++) {
-			int type = t->tuples[i].first;
-			int code = t->tuples[i].second;
+	if (quirks_get_tuples(q, QUIRK_ATTR_INPUT_PROP, &t)) {
+		for (size_t idx = 0; idx < t->ntuples; idx++) {
+			unsigned int p = t->tuples[idx].first;
+			bool enable = t->tuples[idx].second;
 
-			if (code == EVENT_CODE_UNDEFINED)
-				libevdev_disable_event_type(device->evdev,
-							    type);
-			else
-				libevdev_disable_event_code(device->evdev,
-							    type,
-							    code);
-			evdev_log_debug(device,
-					"quirks: disabling %s %s (%#x %#x)\n",
-					libevdev_event_type_get_name(type),
-					libevdev_event_code_get_name(type, code),
-					type,
-					code);
-		}
-	}
-
-	if (quirks_get_uint32_array(q,
-				    QUIRK_ATTR_INPUT_PROP_ENABLE,
-				    &props,
-				    &nprops)) {
-		for (size_t idx = 0; idx < nprops; idx++) {
-			unsigned int p = props[idx];
-			libevdev_enable_property(device->evdev, p);
-			evdev_log_debug(device,
-					"quirks: enabling %s (%#x)\n",
-					libevdev_property_get_name(p),
-					p);
-		}
-	}
-
-	if (quirks_get_uint32_array(q,
-					 QUIRK_ATTR_INPUT_PROP_DISABLE,
-					 &props,
-					 &nprops)) {
+			if (enable) {
+				libevdev_enable_property(device->evdev, p);
+			}
+			else {
 #if HAVE_LIBEVDEV_DISABLE_PROPERTY
-		for (size_t idx = 0; idx < nprops; idx++) {
-			unsigned int p = props[idx];
-			libevdev_disable_property(device->evdev, p);
+				libevdev_disable_property(device->evdev, p);
+#else
+				evdev_log_error(device,
+						"quirks: a quirk for this device requires newer libevdev than installed\n");
+#endif
+			}
 			evdev_log_debug(device,
-					"quirks: disabling %s (%#x)\n",
+					"quirks: %s %s (%#x)\n",
+					enable ? "enabling" : "disabling",
 					libevdev_property_get_name(p),
 					p);
 		}
-#else
-		evdev_log_error(device,
-				"quirks: a quirk for this device requires newer libevdev than installed\n");
-#endif
 	}
 
 	quirks_unref(q);
@@ -2468,8 +2563,8 @@ evdev_device_calibrate(struct evdev_device *device,
 		return;
 	}
 
-	sx = device->abs.absinfo_x->maximum - device->abs.absinfo_x->minimum + 1;
-	sy = device->abs.absinfo_y->maximum - device->abs.absinfo_y->minimum + 1;
+	sx = absinfo_range(device->abs.absinfo_x);
+	sy = absinfo_range(device->abs.absinfo_y);
 
 	/* The transformation matrix is in the form:
 	 *  [ a b c ]
@@ -3025,7 +3120,7 @@ evdev_device_destroy(struct evdev_device *device)
 bool
 evdev_tablet_has_left_handed(struct evdev_device *device)
 {
-	bool has_left_handed = false;
+	bool has_left_handed = true;
 #if HAVE_LIBWACOM
 	struct libinput *li = evdev_libinput_context(device);
 	WacomDeviceDatabase *db = NULL;
@@ -3046,8 +3141,7 @@ evdev_tablet_has_left_handed(struct evdev_device *device)
 				   error);
 
 	if (d) {
-		if (libwacom_is_reversible(d))
-			has_left_handed = true;
+		has_left_handed = !!libwacom_is_reversible(d);
 	} else if (libwacom_error_get_code(error) == WERROR_UNKNOWN_MODEL) {
 		evdev_log_info(device,
 			       "tablet '%s' unknown to libwacom\n",

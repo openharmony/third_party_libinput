@@ -39,6 +39,8 @@
 static const char *
 next_word(const char **state, size_t *len, const char *separators)
 {
+	assert(state != NULL);
+
 	const char *next = *state;
 	size_t l;
 
@@ -72,6 +74,7 @@ strv_from_argv(int argc, char **argv)
 	char **strv = NULL;
 
 	assert(argc >= 0);
+	assert(argv != NULL);
 
 	if (argc == 0)
 		return NULL;
@@ -91,47 +94,55 @@ strv_from_argv(int argc, char **argv)
 /**
  * Return a null-terminated string array with the tokens in the input
  * string, e.g. "one two\tthree" with a separator list of " \t" will return
- * an array [ "one", "two", "three", NULL ].
+ * an array [ "one", "two", "three", NULL ] and num elements 3.
  *
  * Use strv_free() to free the array.
  *
+ * Another example:
+ *   result = strv_from_string("+1-2++3--4++-+5-+-", "+-", &nelem)
+ *   result == [ "1", "2", "3", "4", "5", NULL ] and nelem == 5
+ *
  * @param in Input string
  * @param separators List of separator characters
+ * @param num_elements Number of elements found in the input string
  *
  * @return A null-terminated string array or NULL on errors
  */
 char **
-strv_from_string(const char *in, const char *separators)
+strv_from_string(const char *in, const char *separators, size_t *num_elements)
 {
-	const char *s, *word;
-	char **strv = NULL;
-	int nelems = 0, idx;
-	size_t l;
-
 	assert(in != NULL);
+	assert(separators != NULL);
+	assert(num_elements != NULL);
 
-	s = in;
+	const char *s = in;
+	size_t l, nelems = 0;
 	while (next_word(&s, &l, separators) != NULL)
-	       nelems++;
+		nelems++;
 
-	if (nelems == 0)
+	if (nelems == 0) {
+		*num_elements = 0;
 		return NULL;
+	}
 
-	nelems++; /* NULL-terminated */
-	strv = zalloc(nelems * sizeof *strv);
+	size_t strv_len = nelems + 1; /* NULL-terminated */
+	char **strv = zalloc(strv_len * sizeof *strv);
 
-	idx = 0;
-
+	size_t idx = 0;
+	const char *word;
 	s = in;
 	while ((word = next_word(&s, &l, separators)) != NULL) {
 		char *copy = strndup(word, l);
 		if (!copy) {
 			strv_free(strv);
+			*num_elements = 0;
 			return NULL;
 		}
 
 		strv[idx++] = copy;
 	}
+
+	*num_elements = nelems;
 
 	return strv;
 }
@@ -153,6 +164,8 @@ strv_from_string(const char *in, const char *separators)
 char *
 strv_join(char **strv, const char *joiner)
 {
+	assert(strv != NULL);
+
 	char **s;
 	char *str;
 	size_t slen = 0;
@@ -194,6 +207,8 @@ strv_join(char **strv, const char *joiner)
 const char *
 safe_basename(const char *filename)
 {
+	assert(filename != NULL);
+
 	const char *basename;
 
 	if (*filename == '\0')
@@ -209,7 +224,6 @@ safe_basename(const char *filename)
 	return basename + 1;
 }
 
-
 /**
  * Similar to basename() but returns the trunk only without the (last)
  * trailing suffix, so that:
@@ -224,6 +238,8 @@ safe_basename(const char *filename)
 char *
 trunkname(const char *filename)
 {
+	assert(filename != NULL);
+
 	const char *base = safe_basename(filename);
 	char *suffix;
 

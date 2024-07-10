@@ -57,7 +57,6 @@ input_event_time(const struct input_event *e)
 	return tv2us(&tval);
 }
 
-
 static inline void
 input_event_set_time(struct input_event *e,
 		     uint64_t time)
@@ -66,4 +65,10 @@ input_event_set_time(struct input_event *e,
 
 	e->input_event_sec = tval.tv_sec;
 	e->input_event_usec = tval.tv_usec;
+}
+
+static inline double
+absinfo_range(const struct input_absinfo *abs)
+{
+	return (double)(abs->maximum - abs->minimum + 1);
 }
