@@ -35,6 +35,10 @@
 #include <libinput.h>
 #include <math.h>
 
+#ifndef ck_assert_notnull
+#define ck_assert_notnull(ptr) ck_assert_ptr_ne(ptr, NULL)
+#endif
+
 #include "check-double-macros.h"
 
 #include "libinput-private-config.h"
@@ -227,100 +231,116 @@ litest_fail_comparison_ptr(const char *file,
 
 enum litest_device_type {
 	LITEST_NO_DEVICE = -1,
-	LITEST_SYNAPTICS_CLICKPAD_X220 = -1000,
-	LITEST_SYNAPTICS_TOUCHPAD,
-	LITEST_SYNAPTICS_TOPBUTTONPAD,
-	LITEST_BCM5974,
-	LITEST_KEYBOARD,
-	LITEST_TRACKPOINT,
-	LITEST_MOUSE,
-	LITEST_WACOM_TOUCH,
+	/* Touchpads and associated devices */
+	LITEST_ACER_HAWAII_TOUCHPAD = -1000,
+	LITEST_AIPTEK,
+	LITEST_ALPS_3FG,
+	LITEST_ALPS_DUALPOINT,
 	LITEST_ALPS_SEMI_MT,
+	LITEST_APPLETOUCH,
+	LITEST_ATMEL_HOVER,
+	LITEST_BCM5974,
+	LITEST_ELANTECH_TOUCHPAD,
+	LITEST_GENERIC_PRESSUREPAD,
+	LITEST_MAGIC_TRACKPAD,
+	LITEST_SYNAPTICS_CLICKPAD_X220,
+	LITEST_SYNAPTICS_HOVER_SEMI_MT,
+	LITEST_SYNAPTICS_I2C,
+	LITEST_SYNAPTICS_PHANTOMCLICKS,
+	LITEST_SYNAPTICS_PRESSUREPAD,
+	LITEST_SYNAPTICS_RMI4,
+	LITEST_SYNAPTICS_TOPBUTTONPAD,
+	LITEST_SYNAPTICS_TOUCHPAD,
+	LITEST_TOUCHPAD_PALMPRESSURE_ZERO,
+	LITEST_WACOM_FINGER,
+
+	/* Touchscreens */
+	LITEST_CALIBRATED_TOUCHSCREEN,
+	LITEST_GENERIC_MULTITOUCH_SCREEN,
 	LITEST_GENERIC_SINGLETOUCH,
 	LITEST_MS_SURFACE_COVER,
-	LITEST_QEMU_TABLET,
-	LITEST_XEN_VIRTUAL_POINTER,
-	LITEST_VMWARE_VIRTMOUSE,
-	LITEST_SYNAPTICS_HOVER_SEMI_MT,
-	LITEST_SYNAPTICS_TRACKPOINT_BUTTONS,
-	LITEST_PROTOCOL_A_SCREEN,
-	LITEST_WACOM_FINGER,
-	LITEST_KEYBOARD_BLACKWIDOW,
-	LITEST_WHEEL_ONLY,
-	LITEST_MOUSE_ROCCAT,
-	LITEST_LOGITECH_TRACKBALL,
-	LITEST_ATMEL_HOVER,
-	LITEST_ALPS_DUALPOINT,
-	LITEST_MOUSE_LOW_DPI,
-	LITEST_GENERIC_MULTITOUCH_SCREEN,
-	LITEST_NEXUS4_TOUCH_SCREEN,
-	LITEST_MAGIC_TRACKPAD,
-	LITEST_ELANTECH_TOUCHPAD,
-	LITEST_MOUSE_GLADIUS,
-	LITEST_MOUSE_WHEEL_CLICK_ANGLE,
-	LITEST_APPLE_KEYBOARD,
-	LITEST_ANKER_MOUSE_KBD,
-	LITEST_WACOM_BAMBOO,
-	LITEST_WACOM_CINTIQ,
-	LITEST_WACOM_INTUOS,
-	LITEST_WACOM_ISDV4,
-	LITEST_WALTOP,
-	LITEST_HUION_TABLET,
-	LITEST_CYBORG_RAT,
-	LITEST_YUBIKEY,
-	LITEST_SYNAPTICS_I2C,
-	LITEST_WACOM_CINTIQ_24HD,
 	LITEST_MULTITOUCH_FUZZ_SCREEN,
-	LITEST_WACOM_INTUOS3_PAD,
-	LITEST_WACOM_INTUOS5_PAD,
-	LITEST_KEYBOARD_ALL_CODES,
-	LITEST_MAGICMOUSE,
-	LITEST_WACOM_EKR,
-	LITEST_WACOM_CINTIQ_24HDT_PAD,
-	LITEST_WACOM_CINTIQ_13HDT_PEN,
-	LITEST_WACOM_CINTIQ_13HDT_PAD,
-	LITEST_WACOM_CINTIQ_13HDT_FINGER,
-	LITEST_WACOM_CINTIQ_PRO16_PAD,
-	LITEST_WACOM_CINTIQ_PRO16_PEN,
-	LITEST_WACOM_CINTIQ_PRO16_FINGER,
-	LITEST_WACOM_HID4800_PEN,
-	LITEST_MOUSE_WHEEL_CLICK_COUNT,
-	LITEST_CALIBRATED_TOUCHSCREEN,
-	LITEST_ACER_HAWAII_KEYBOARD,
-	LITEST_ACER_HAWAII_TOUCHPAD,
-	LITEST_SYNAPTICS_RMI4,
-	LITEST_MOUSE_WHEEL_TILT,
-	LITEST_LID_SWITCH,
-	LITEST_LID_SWITCH_SURFACE3,
-	LITEST_APPLETOUCH,
-	LITEST_GPIO_KEYS,
-	LITEST_IGNORED_MOUSE,
-	LITEST_WACOM_MOBILESTUDIO_PRO_16_PAD,
-	LITEST_THINKPAD_EXTRABUTTONS,
-	LITEST_UCLOGIC_TABLET,
-	LITEST_KEYBOARD_BLADE_STEALTH,
-	LITEST_KEYBOARD_BLADE_STEALTH_VIDEOSWITCH,
-	LITEST_WACOM_BAMBOO_2FG_PAD,
-	LITEST_WACOM_BAMBOO_2FG_PEN,
-	LITEST_WACOM_BAMBOO_2FG_FINGER,
-	LITEST_HP_WMI_HOTKEYS,
-	LITEST_MS_NANO_TRANSCEIVER_MOUSE,
-	LITEST_AIPTEK,
+	LITEST_NEXUS4_TOUCH_SCREEN,
+	LITEST_PROTOCOL_A_SCREEN,
 	LITEST_TOUCHSCREEN_INVALID_RANGE,
 	LITEST_TOUCHSCREEN_MT_TOOL_TYPE,
+	LITEST_WACOM_TOUCH,
+
+	/* Pointing devices and keyboards */
+	LITEST_MOUSE,
+	LITEST_KEYBOARD,
+	LITEST_TRACKPOINT,
+	LITEST_ABSINFO_OVERRIDE,
+	LITEST_ACER_HAWAII_KEYBOARD,
+	LITEST_ANKER_MOUSE_KBD,
+	LITEST_APPLE_KEYBOARD,
+	LITEST_CYBORG_RAT,
+	LITEST_HP_WMI_HOTKEYS,
+	LITEST_IGNORED_MOUSE,
+	LITEST_KEYBOARD_ALL_CODES,
+	LITEST_KEYBOARD_BLACKWIDOW,
+	LITEST_KEYBOARD_BLADE_STEALTH,
+	LITEST_KEYBOARD_BLADE_STEALTH_VIDEOSWITCH,
+	LITEST_KEYBOARD_LOGITECH_MEDIA_KEYBOARD_ELITE,
+	LITEST_KEYBOARD_QUIRKED,
+	LITEST_LENOVO_SCROLLPOINT,
+	LITEST_LOGITECH_TRACKBALL,
+	LITEST_MAGICMOUSE,
+	LITEST_MOUSE_FORMAT_STRING,
+	LITEST_MOUSE_GLADIUS,
+	LITEST_MOUSE_LOW_DPI,
+	LITEST_MOUSE_ROCCAT,
+	LITEST_MOUSE_WHEEL_CLICK_ANGLE,
+	LITEST_MOUSE_WHEEL_CLICK_COUNT,
+	LITEST_MOUSE_WHEEL_TILT,
+	LITEST_MS_NANO_TRANSCEIVER_MOUSE,
+	LITEST_SONY_VAIO_KEYS,
+	LITEST_SYNAPTICS_TRACKPOINT_BUTTONS,
+	LITEST_THINKPAD_EXTRABUTTONS,
+	LITEST_VMWARE_VIRTMOUSE,
+	LITEST_WHEEL_ONLY,
+	LITEST_XEN_VIRTUAL_POINTER,
+
+	/* Switches */
+	LITEST_LID_SWITCH,
+	LITEST_LID_SWITCH_SURFACE3,
+	LITEST_TABLET_MODE_UNRELIABLE,
+
+	/* Special devices */
 	LITEST_DELL_CANVAS_TOTEM,
 	LITEST_DELL_CANVAS_TOTEM_TOUCH,
-	LITEST_WACOM_ISDV4_4200_PEN,
-	LITEST_ALPS_3FG,
+	LITEST_GPIO_KEYS,
+	LITEST_YUBIKEY,
+
+	/* Tablets */
 	LITEST_ELAN_TABLET,
-	LITEST_ABSINFO_OVERRIDE,
-	LITEST_TABLET_MODE_UNRELIABLE,
-	LITEST_KEYBOARD_LOGITECH_MEDIA_KEYBOARD_ELITE,
-	LITEST_SONY_VAIO_KEYS,
-	LITEST_KEYBOARD_QUIRKED,
-	LITEST_SYNAPTICS_PRESSUREPAD,
-	LITEST_GENERIC_PRESSUREPAD,
-	LITEST_MOUSE_FORMAT_STRING,
+	LITEST_HUION_TABLET,
+	LITEST_QEMU_TABLET,
+	LITEST_UCLOGIC_TABLET,
+	LITEST_WACOM_BAMBOO,
+	LITEST_WACOM_BAMBOO_2FG_FINGER,
+	LITEST_WACOM_BAMBOO_2FG_PAD,
+	LITEST_WACOM_BAMBOO_2FG_PEN,
+	LITEST_WACOM_CALIBRATED_TABLET,
+	LITEST_WACOM_CINTIQ,
+	LITEST_WACOM_CINTIQ_13HDT_FINGER,
+	LITEST_WACOM_CINTIQ_13HDT_PAD,
+	LITEST_WACOM_CINTIQ_13HDT_PEN,
+	LITEST_WACOM_CINTIQ_24HD,
+	LITEST_WACOM_CINTIQ_24HDT_PAD,
+	LITEST_WACOM_CINTIQ_PRO16_FINGER,
+	LITEST_WACOM_CINTIQ_PRO16_PAD,
+	LITEST_WACOM_CINTIQ_PRO16_PEN,
+	LITEST_WACOM_EKR,
+	LITEST_WACOM_HID4800_PEN,
+	LITEST_WACOM_INTUOS,
+	LITEST_WACOM_INTUOS3_PAD,
+	LITEST_WACOM_INTUOS5_PAD,
+	LITEST_WACOM_ISDV4,
+	LITEST_WACOM_ISDV4_4200_PEN,
+	LITEST_WACOM_ISDV4_524C_PEN,
+	LITEST_WACOM_MOBILESTUDIO_PRO_16_PAD,
+	LITEST_WALTOP,
 };
 
 #define LITEST_DEVICELESS	-2
@@ -359,6 +379,7 @@ enum litest_device_type {
 #define LITEST_DIRECT		bit(30)
 #define LITEST_TOTEM		bit(31)
 #define LITEST_FORCED_PROXOUT	bit(32)
+#define LITEST_PRECALIBRATED	bit(33)
 
 /* this is a semi-mt device, so we keep track of the touches that the tests
  * send and modify them so that the first touch is always slot 0 and sends
@@ -624,15 +645,25 @@ litest_tablet_set_tool_type(struct litest_device *d,
 
 void
 litest_tablet_proximity_in(struct litest_device *d,
-			   int x, int y,
+			   double x, double y,
 			   struct axis_replacement *axes);
 
 void
 litest_tablet_proximity_out(struct litest_device *d);
 
 void
+litest_tablet_tip_down(struct litest_device *d,
+		       double x, double y,
+		       struct axis_replacement *axes);
+
+void
+litest_tablet_tip_up(struct litest_device *d,
+		     double x, double y,
+		     struct axis_replacement *axes);
+
+void
 litest_tablet_motion(struct litest_device *d,
-		     int x, int y,
+		     double x, double y,
 		     struct axis_replacement *axes);
 
 void
@@ -819,6 +850,11 @@ litest_assert_button_event(struct libinput *li,
 			   enum libinput_button_state state);
 
 void
+litest_assert_switch_event(struct libinput *li,
+			   enum libinput_switch sw,
+			   enum libinput_switch_state state);
+
+void
 litest_assert_scroll(struct libinput *li,
 		     enum libinput_event_type axis_type,
 		     enum libinput_pointer_axis axis,
@@ -896,6 +932,9 @@ void
 litest_timeout_buttonscroll(void);
 
 void
+litest_timeout_wheel_scroll(void);
+
+void
 litest_timeout_edgescroll(void);
 
 void
@@ -965,10 +1004,6 @@ void
 litest_semi_mt_touch_up(struct litest_device *d,
 			struct litest_semi_mt *semi_mt,
 			unsigned int slot);
-
-#ifndef ck_assert_notnull
-#define ck_assert_notnull(ptr) ck_assert_ptr_ne(ptr, NULL)
-#endif
 
 static inline void
 litest_enable_tap(struct libinput_device *device)
@@ -1049,6 +1084,8 @@ litest_enable_2fg_scroll(struct litest_device *dev)
 
 	expected = LIBINPUT_CONFIG_STATUS_SUCCESS;
 	litest_assert_int_eq(status, expected);
+
+	libinput_device_config_scroll_set_natural_scroll_enabled(device, 0);
 }
 
 static inline void
@@ -1062,6 +1099,8 @@ litest_enable_edge_scroll(struct litest_device *dev)
 
 	expected = LIBINPUT_CONFIG_STATUS_SUCCESS;
 	litest_assert_int_eq(status, expected);
+
+	libinput_device_config_scroll_set_natural_scroll_enabled(device, 0);
 }
 
 static inline bool
@@ -1244,7 +1283,8 @@ litest_send_file(int sock, int fd)
 	return write(sock, buf, n);
 }
 
-static inline int litest_slot_count(struct litest_device *dev)
+static inline int
+litest_slot_count(struct litest_device *dev)
 {
 	if (dev->which == LITEST_ALPS_3FG)
 		return 2;
@@ -1267,7 +1307,7 @@ litest_has_palm_detect_size(struct litest_device *dev)
 	if (bustype == BUS_BLUETOOTH)
 		return 0;
 	if (vendor == VENDOR_ID_APPLE)
-		return 1;
+		return 0;
 
 	rc = libinput_device_get_size(dev->libinput_device, &width, &height);
 

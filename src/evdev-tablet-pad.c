@@ -23,6 +23,7 @@
 
 #include "config.h"
 #include "evdev-tablet-pad.h"
+#include "util-input-event.h"
 
 #include <assert.h>
 #include <stdbool.h>
@@ -151,7 +152,7 @@ normalize_ring(const struct input_absinfo *absinfo)
 	   current logical rotation, increasing clockwise to 1. Wacom has
 	   0 on the left-most wheel position.
 	 */
-	double range = absinfo->maximum - absinfo->minimum + 1;
+	double range = absinfo_range(absinfo);
 	double value = (absinfo->value - absinfo->minimum) / range - 0.25;
 
 	if (value < 0.0)
@@ -556,15 +557,27 @@ pad_init_buttons_from_libwacom(struct pad_dispatch *pad,
 	WacomDevice *tablet = NULL;
 	int num_buttons;
 	int map = 0;
+	char event_path[64];
 
 	db = libinput_libwacom_ref(li);
 	if (!db)
 		goto out;
 
-	tablet = libwacom_new_from_usbid(db,
-					 evdev_device_get_id_vendor(device),
-					 evdev_device_get_id_product(device),
-					 NULL);
+	snprintf(event_path,
+		 sizeof(event_path),
+		 "/dev/input/%s",
+		 evdev_device_get_sysname(device));
+	tablet = libwacom_new_from_path(db,
+					event_path,
+					WFALLBACK_NONE,
+					NULL);
+	if (!tablet) {
+		tablet = libwacom_new_from_usbid(db,
+						 evdev_device_get_id_vendor(device),
+						 evdev_device_get_id_product(device),
+						 NULL);
+	}
+
 	if (!tablet)
 		goto out;
 
@@ -630,7 +643,6 @@ pad_init_keys(struct pad_dispatch *pad, struct evdev_device *device)
 		KEY_ONSCREEN_KEYBOARD,
 		KEY_CONTROLPANEL,
 	};
-	unsigned int *code;
 
 	/* Wacom's keys are the only ones we know anything about */
 	if (libevdev_get_id_vendor(device->evdev) != VENDOR_ID_WACOM)

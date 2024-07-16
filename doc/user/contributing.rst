@@ -69,7 +69,7 @@ will be:
 
      $> git clone https://gitlab.freedesktop.org/libinput/libinput
      $> cd libinput
-     $> meson --prefix=/usr builddir/
+     $> meson setup --prefix=/usr builddir/
      $> ninja -C builddir/
      $> sudo ninja -C builddir/ install
 
@@ -78,6 +78,15 @@ You can omit the last step if you only want to test locally.
 ------------------------------------------------------------------------------
 Working on the code
 ------------------------------------------------------------------------------
+
+If you are planning to send patches, it's a good idea to set up
+`pre-commit <https://pre-commit.com/>`_ with these commands::
+
+     $> pre-commit install
+     $> pre-commit install --hook-type pre-push
+
+This will check a few things before you commit and/or push to your repos to
+reduce the turnaround time for some common mistakes.
 
 libinput has a roughly three-parts architecture:
 
@@ -157,8 +166,8 @@ sufficient to make some of the more confusing steps obvious.
 
 - `Register an account <https://gitlab.freedesktop.org/users/sign_in>`_ in
   the freedesktop.org GitLab instance.
-- `Fork libinput <https://gitlab.freedesktop.org/libinput/libinput/forks/new>`_
-  into your username's namespace
+- `Fork libinput <https://gitlab.freedesktop.org/libinput/libinput/-/forks/new>`_
+  into your username's namespace. Select public visibility.
 - Get libinput's main repository. git will call this repository ``origin``. ::
 
     git clone https://gitlab.freedesktop.org/libinput/libinput.git
@@ -266,25 +275,6 @@ same file(s) as the patch being sent.
 Commit Messages
 ------------------------------------------------------------------------------
 
-Commit messages **must** contain a **Signed-off-by** line with your name
-and email address. An example is: ::
-
-    A description of this commit, and it's great work.
-
-    Signed-off-by: Claire Someone <name@domain>
-
-If you're not the patch's original author, you should
-also gather S-o-b's by them (and/or whomever gave the patch to you.) The
-significance of this is that it certifies that you created the patch, that
-it was created under an appropriate open source license, or provided to you
-under those terms. This lets us indicate a chain of responsibility for the
-copyright status of the code. An example is: ::
-
-    A description of this commit, and it's great work.
-
-    Signed-off-by: Claire Someone <name@domain>
-    Signed-off-by: Ferris Crab <name@domain>
-
 When you re-send patches, revised or not, it would be very good to document the
 changes compared to the previous revision in the commit message and/or the
 merge request. If you have already received Reviewed-by or Acked-by tags, you
@@ -352,26 +342,6 @@ Visit your merge request page and check the `pipeline mini graph
 step failed.
 
 Follow the appropriate section to fix the errors.
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Missing "Signed-off-by: author information"
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-As explained in :ref:`contributing_commit_messages`, every commit must contain a
-Signed-off-by line with your name and email address.
-
-When this line is not present, it can be added to your commit afterwards: ::
-
-  git commit --amend -s
-
-If the merge request contains more than one commit, it must be added to all of
-them: ::
-
-  git rebase --interactive --exec 'git commit --amend -s' main
-
-Once the problem is fixed, force-push your branch. See
-:ref:`contributing_submitting_code` for more details about how to push your code
-and interactive rebases.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Committed gitlab-ci.yml differs from generated gitlab-ci.yml. Please verify

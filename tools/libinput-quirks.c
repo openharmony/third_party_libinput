@@ -45,7 +45,7 @@ log_handler(struct libinput *this_is_null,
 	FILE *out = stdout;
 	enum quirks_log_priorities p = (enum quirks_log_priorities)priority;
 	char buf[256] = {0};
-	const char *prefix = "";
+	const char *prefix = NULL;
 
 	switch (p) {
 	case QLOG_NOISE:
@@ -197,7 +197,7 @@ main(int argc, char **argv)
 	udev = udev_new();
 	if (!udev)
 		goto out;
-		
+
 	path = argv[optind];
 	if (strneq(path, "/sys/", 5)) {
 		device = udev_device_new_from_syspath(udev, path);

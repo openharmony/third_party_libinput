@@ -52,51 +52,102 @@ somenamethatiswaytoolong(int a,
 - if it generates a static checker warning, it needs to be fixed or
   commented
 
-- declare variables at the top, try to keep them as local as possible.
-  Exception: if the same variable is re-used in multiple blocks, declare it
-  at the top.
-  Exception: basic loop variables, e.g. for (int i = 0; ...)
+- declare variables when they are used first and try to keep them as local as possible.
+  Exception: basic loop variables, e.g. for (int i = 0; ...) should always be
+  declared inside the loop even where multiple loops exist
 
 ```c
 int a;
-int c;
 
 if (foo) {
-        int b;
+        int b = 10;
 
-        c = get_value();
-        usevalue(c);
+        a = get_value();
+        usevalue(a, b);
 }
 
 if (bar) {
-        c = get_value();
-        useit(c);
+        a = get_value();
+        useit(a);
 }
+
+int c = a * 100;
+useit(c);
 ```
 
-- do not mix function invocations and variable definitions.
+- avoid uninitialized variables where possible, declare them late instead.
+  Note that most of libinput predates this style, try to stick with the code
+  around you if in doubt.
 
   wrong:
 
 ```c
-{
-        int a = foo();
+        int *a;
         int b = 7;
-}
+
+        ... some code ...
+
+        a = zalloc(32);
 ```
 
   right:
+
+```c
+        int b = 7;
+        ... some code ...
+
+        int *a = zalloc(32);
+```
+
+- avoid calling non-obvious functions inside declaration blocks for multiple
+  variables.
+
+  bad:
+
 ```c
 {
-        int a;
-        int b = 7;
-
-        a = foo();
+        int a = 7;
+        int b = some_complicated_function();
+        int *c = zalloc(32);
 }
 ```
 
-  There are exceptions here, e.g. `tp_libinput_context()`,
-  `litest_current_device()`
+  better:
+```c
+{
+        int a = 7;
+        int *c = zalloc(32);
+
+        int b = some_complicated_function();
+}
+```
+
+  There is a bit of gut-feeling involved with this, but the goal is to make
+  the variable values immediately recognizable.
+
+- Where statements are near-identical and repeated, try to keep them
+  identical:
+
+  bad:
+```c
+int a = get_some_value(x++);
+do_something(a);
+a = get_some_value(x++);
+do_something(a);
+a = get_some_value(x++);
+do_something(a);
+```
+  better:
+
+```c
+int a;
+a = = get_some_value(x++);
+do_something(a);
+a = get_some_value(x++);
+do_something(a);
+a = get_some_value(x++);
+do_something(a);
+```
 
 - if/else: { on the same line, no curly braces if both blocks are a single
   statement. If either if or else block are multiple statements, both must
@@ -160,38 +211,6 @@ the approach chosen was correct. A good commit message also helps
 maintainers to decide if a given patch is suitable for stable branches or
 inclusion in a distribution.
 
-## Developer Certificate of Origin
-
-Your commit **must** be signed off with a line:
-```
-Signed-off-by: <your name> <your email address>
-```
-By signing off, you indicate the [developer certificate of origin](https://developercertificate.org/).
-
-> By making a contribution to this project, I certify that:
->
-> (a) The contribution was created in whole or in part by me and I
->     have the right to submit it under the open source license
->     indicated in the file; or
->
-> (b) The contribution is based upon previous work that, to the best
->     of my knowledge, is covered under an appropriate open source
->     license and I have the right under that license to submit that
->     work with modifications, whether created in whole or in part
->     by me, under the same open source license (unless I am
->     permitted to submit under a different license), as indicated
->     in the file; or
->
-> (c) The contribution was provided directly to me by some other
->     person who certified (a), (b) or (c) and I have not modified
->     it.
->
-> (d) I understand and agree that this project and the contribution
->     are public and that a record of the contribution (including all
->     personal information I submit with it, including my sign-off) is
->     maintained indefinitely and may be redistributed consistent with
->     this project or the open source license(s) involved.
-
 ## Commit message format
 
 The canonical git commit message format is:
@@ -206,8 +225,6 @@ supported.
 You can include extra data where required like:
 - benchmark one says 10s
 - benchmark two says 12s
-
-Signed-off-by: <your name> <your email>
 ```
 
 The subject line is the first thing everyone sees about this commit, so make
@@ -219,8 +236,8 @@ sure it's on point.
   "change foo to bar", not "changed foo to bar".
 - The text width of the commit should be 78 chars or less, especially the
   subject line.
-- The author and signed-off-by must be your real name and email address. We
-  do not accept the default `@users.noreply` gitlab addresses.
+- The author must be the name you usually identify as and email address. We do
+  not accept the default `@users.noreply` gitlab addresses.
   ```
   git config --global user.name Your Name
   git config --global user.email your@email

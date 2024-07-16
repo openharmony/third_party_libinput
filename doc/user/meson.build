@@ -110,6 +110,7 @@ src_rst = files(
 	'svg/palm-detection.svg',
 	'svg/pinch-gestures.svg',
 	'svg/pinch-gestures-softbuttons.svg',
+	'svg/ptraccel-custom.svg',
 	'svg/ptraccel-linear.svg',
 	'svg/ptraccel-low-dpi.svg',
 	'svg/ptraccel-touchpad.svg',
@@ -139,12 +140,14 @@ src_rst = files(
 	'building.rst',
 	'button-debouncing.rst',
 	'clickpad-softbuttons.rst',
+	'clickpad-with-right-button.rst',
 	'contributing.rst',
 	'device-configuration-via-udev.rst',
 	'device-quirks.rst',
 	'faqs.rst',
 	'gestures.rst',
 	'incorrectly-enabled-hires.rst',
+	'ignoring-devices.rst',
 	'middle-button-emulation.rst',
 	'normalization-of-relative-motion.rst',
 	'palm-detection.rst',
@@ -194,7 +197,8 @@ if yq.found()
 	foreach distro : distributions
 		yq_filter = '.distributions[] | select(.name == "@0@") | .packages | join(" ")'.format(distro)
 		deps = run_command(yq, '-r', yq_filter,
-				   meson.source_root() / '.gitlab-ci' / 'config.yml').stdout()
+				   dir_gitlab_ci / 'config.yml',
+				   check: true).stdout()
 		dependencies_config.set('@0@_PACKAGES'.format(distro.to_upper()), deps)
 endforeach
 endif

@@ -48,7 +48,7 @@
 
 #include "shared.h"
 
-#ifdef GDK_WINDOWING_WAYLAND
+#if HAVE_GTK_WAYLAND
 	#include <wayland-client.h>
 	#include "pointer-constraints-unstable-v1-client-protocol.h"
 	#if HAVE_GTK4
@@ -58,7 +58,7 @@
 	#endif
 #endif
 
-#ifdef GDK_WINDOWING_X11
+#if HAVE_GTK_X11
 	#include <X11/X.h>
 	#include <X11/Xlib.h>
 	#if HAVE_GTK4
@@ -120,7 +120,7 @@ struct window {
 	struct {
 		bool locked;
 
-#ifdef GDK_WINDOWING_WAYLAND
+#if HAVE_GTK_WAYLAND
 		struct zwp_pointer_constraints_v1 *wayland_pointer_constraints;
 		struct zwp_locked_pointer_v1 *wayland_locked_pointer;
 #endif
@@ -207,7 +207,7 @@ struct window {
 	struct libinput_device *devices[50];
 };
 
-#ifdef GDK_WINDOWING_WAYLAND
+#if HAVE_GTK_WAYLAND
 static void
 wayland_registry_global(void *data,
 			struct wl_registry *registry,
@@ -297,9 +297,9 @@ backend_is_wayland(void)
 {
 	return GDK_IS_WAYLAND_DISPLAY(gdk_display_get_default());
 }
-#endif /* GDK_WINDOWING_WAYLAND */
+#endif /* HAVE_GTK_WAYLAND */
 
-#ifdef GDK_WINDOWING_X11
+#if HAVE_GTK_X11
 static bool
 x_lock_pointer(struct window *w)
 {
@@ -342,19 +342,20 @@ backend_is_x11(void)
 {
 	return GDK_IS_X11_DISPLAY(gdk_display_get_default());
 }
-#endif /* GDK_WINDOWING_X11 */
+#endif /* HAVE_GTK_X11 */
 
 static bool
 window_lock_pointer(struct window *w)
 {
-	w->lock_pointer.locked = false;
+	if (w->lock_pointer.locked)
+		return true;
 
-#ifdef GDK_WINDOWING_WAYLAND
+#if HAVE_GTK_WAYLAND
 	if (backend_is_wayland())
 		w->lock_pointer.locked = wayland_lock_pointer(w);
 #endif
 
-#ifdef GDK_WINDOWING_X11
+#if HAVE_GTK_X11
 	if (backend_is_x11())
 		w->lock_pointer.locked = x_lock_pointer(w);
 #endif
@@ -370,12 +371,12 @@ window_unlock_pointer(struct window *w)
 
 	w->lock_pointer.locked = false;
 
-#ifdef GDK_WINDOWING_WAYLAND
+#if HAVE_GTK_WAYLAND
 	if (backend_is_wayland())
 		wayland_unlock_pointer(w);
 #endif
 
-#ifdef GDK_WINDOWING_X11
+#if HAVE_GTK_X11
 	if (backend_is_x11())
 		x_unlock_pointer(w);
 #endif
@@ -447,7 +448,6 @@ draw_evdev_abs(struct window *w, cairo_t *cr)
 	int x, y;
 
 	cairo_save(cr);
-	cairo_set_source_rgb(cr, .2, .2, .8);
 
 	center_x = w->width/2 + 400;
 	center_y = w->height/2;
@@ -494,6 +494,7 @@ draw_evdev_abs(struct window *w, cairo_t *cr)
 		if (!w->evdev.slots[i].active)
 			continue;
 
+		cairo_set_source_rgb(cr, .2, .2, .8);
 		x = w->evdev.slots[i].x;
 		y = w->evdev.slots[i].y;
 		x = 1.0 * (x - ax->minimum)/width * outline_width;
@@ -502,10 +503,21 @@ draw_evdev_abs(struct window *w, cairo_t *cr)
 		y += center_y - outline_height/2;
 		cairo_arc(cr, x, y, 10, 0, 2 * M_PI);
 		cairo_fill(cr);
+
+		char finger_text[3];
+		cairo_text_extents_t finger_text_extents;
+		snprintf(finger_text, 3, "%zu", i);
+		cairo_set_source_rgb(cr, 1.f, 1.f, 1.f);
+		cairo_set_font_size(cr, 12.0);
+		cairo_text_extents(cr, finger_text, &finger_text_extents);
+		cairo_move_to(cr, x - finger_text_extents.width/2,
+				  y + finger_text_extents.height/2);
+		cairo_show_text(cr, finger_text);
 	}
 
 draw_outline:
 	/* The touchpad outline */
+	cairo_set_source_rgb(cr, .2, .2, .8);
 	cairo_rectangle(cr,
 			center_x - outline_width/2,
 			center_y - outline_height/2,
@@ -603,8 +615,6 @@ draw_scrollbars(struct window *w, cairo_t *cr)
 static inline void
 draw_touchpoints(struct window *w, cairo_t *cr)
 {
-	struct touch *t;
-
 	cairo_save(cr);
 	ARRAY_FOR_EACH(w->touches, t) {
 		if (t->state == TOUCH_ACTIVE)
@@ -790,7 +800,6 @@ draw_tablet(struct window *w, cairo_t *cr)
 	}
 	cairo_restore(cr);
 
-
 	/* tablet tool, square for prox-in location */
 	cairo_save(cr);
 	cairo_set_source_rgb(cr, .2, .6, .6);
@@ -972,6 +981,7 @@ draw(GtkWidget *widget, cairo_t *cr, gpointer data)
 {
 	struct window *w = data;
 
+	cairo_set_font_size(cr, 12.0);
 	cairo_set_source_rgb(cr, 1, 1, 1);
 	cairo_rectangle(cr, 0, 0, w->width, w->height);
 	cairo_fill(cr);
@@ -1136,7 +1146,7 @@ window_init(struct window *w)
 	g_signal_connect(G_OBJECT(w->win), "close-request", G_CALLBACK(window_delete_event_cb), w);
 
 	gtk_window_set_child(GTK_WINDOW(w->win), w->area);
-	gtk_widget_show(w->win);
+	gtk_widget_set_visible(w->win, TRUE);
 #else
 	g_signal_connect(G_OBJECT(w->win), "map-event", G_CALLBACK(map_event_cb), w);
 	g_signal_connect(G_OBJECT(w->win), "delete-event", G_CALLBACK(window_delete_event_cb), w);
@@ -1155,7 +1165,6 @@ window_init(struct window *w)
 static void
 window_cleanup(struct window *w)
 {
-	struct libinput_device **dev;
 	ARRAY_FOR_EACH(w->devices, dev) {
 		if (*dev)
 			libinput_device_unref(*dev);
@@ -1165,8 +1174,6 @@ window_cleanup(struct window *w)
 static void
 change_ptraccel(struct window *w, double amount)
 {
-	struct libinput_device **dev;
-
 	ARRAY_FOR_EACH(w->devices, dev) {
 		double speed;
 		enum libinput_config_status status;
@@ -1341,7 +1348,6 @@ static void
 handle_event_device_notify(struct libinput_event *ev)
 {
 	struct libinput_device *dev = libinput_event_get_device(ev);
-	struct libinput_device **device;
 	struct libinput *li;
 	struct window *w;
 	const char *type;

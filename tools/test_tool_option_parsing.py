@@ -210,6 +210,7 @@ options = {
         "natural-scrolling",
         "left-handed",
         "dwt",
+        "dwtp",
     ],
     # options with distinct values
     "enums": {
@@ -218,9 +219,10 @@ options = {
         "set-profile": ["adaptive", "flat"],
         "set-tap-map": ["lrm", "lmr"],
     },
-    # options with a range
+    # options with a range (and increment)
     "ranges": {
-        "set-speed": (float, -1.0, +1.0),
+        "set-speed": (-1.0, +1.0, 0.1),
+        "set-rotation": (0, 360, 10),
     },
 }
 
@@ -249,9 +251,7 @@ def test_options_enums(libinput_debug_tool, option):
 @pytest.mark.parametrize("option", options["ranges"].items())
 def test_options_ranges(libinput_debug_tool, option):
     name, values = option
-    range_type, minimum, maximum = values
-    assert range_type == float
-    step = (maximum - minimum) / 10.0
+    minimum, maximum, step = values
     value = minimum
     while value < maximum:
         libinput_debug_tool.run_command_success(["--{}".format(name), str(value)])
@@ -367,7 +367,8 @@ def main():
     try:
         import xdist  # noqa
 
-        args += ["-n", "auto"]
+        ncores = os.environ.get("FDO_CI_CONCURRENT", "auto")
+        args += ["-n", ncores]
     except ImportError:
         logger.info("python-xdist missing, this test will be slow")
         pass

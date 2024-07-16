@@ -226,6 +226,14 @@ print_device_options(struct libinput_device *dev)
 			printq(" dwt-off)");
 	}
 
+	if (libinput_device_config_dwtp_is_available(dev)) {
+		if (libinput_device_config_dwtp_get_enabled(dev) ==
+		    LIBINPUT_CONFIG_DWTP_ENABLED)
+			printq(" dwtp-on");
+		else
+			printq(" dwtp-off)");
+	}
+
 	if (libinput_device_has_capability(dev,
 					   LIBINPUT_DEVICE_CAP_TABLET_PAD)) {
 		int nbuttons, nstrips, nrings, ngroups;
@@ -486,7 +494,7 @@ print_pointer_axis_event(struct libinput_event *ev)
 	double v = 0, h = 0, v120 = 0, h120 = 0;
 	const char *have_vert = "",
 		   *have_horiz = "";
-	const char *source = "invalid";
+	const char *source = NULL;
 	enum libinput_pointer_axis axis;
 	enum libinput_event_type type;
 
@@ -738,7 +746,7 @@ static void
 print_tablet_pad_ring_event(struct libinput_event *ev)
 {
 	struct libinput_event_tablet_pad *p = libinput_event_get_tablet_pad_event(ev);
-	const char *source = "<invalid>";
+	const char *source = NULL;
 	unsigned int mode;
 
 	print_event_time(libinput_event_tablet_pad_get_time(p));
@@ -764,7 +772,7 @@ static void
 print_tablet_pad_strip_event(struct libinput_event *ev)
 {
 	struct libinput_event_tablet_pad *p = libinput_event_get_tablet_pad_event(ev);
-	const char *source = "<invalid>";
+	const char *source = NULL;
 	unsigned int mode;
 
 	print_event_time(libinput_event_tablet_pad_get_time(p));
@@ -810,7 +818,6 @@ print_tablet_pad_key_event(struct libinput_event *ev)
 	       key,
 	       state == LIBINPUT_KEY_STATE_PRESSED ? "pressed" : "released");
 }
-
 
 static void
 print_switch_event(struct libinput_event *ev)
@@ -944,6 +951,9 @@ handle_and_print_events(struct libinput *li)
 		libinput_event_destroy(ev);
 		rc = 0;
 	}
+
+	fflush(stdout);
+
 	return rc;
 }
 
