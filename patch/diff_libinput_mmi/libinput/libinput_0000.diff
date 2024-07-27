@@ -885,6 +885,15 @@ diff -Naur old/hm_src/hm_missing.h new/hm_src/hm_missing.h
 diff -Naur old/include/linux/freebsd/input-event-codes.h new/include/linux/freebsd/input-event-codes.h
 --- old/include/linux/freebsd/input-event-codes.h	2024-01-01 00:00:00.000000000 +0800
 +++ new/include/linux/freebsd/input-event-codes.h	2024-01-01 00:00:00.000000000 +0800
+@@ -335,7 +335,7 @@
+ #define KEY_WIMAX		KEY_WWAN
+ #define KEY_RFKILL		247	/* Key that controls all radios */
+ 
+-#define KEY_MICMUTE		248	/* Mute / unmute the microphone */
++#define KEY_MICMUTE		251	/* Mute / unmute the microphone */
+ 
+ /* Code 255 is reserved for special needs of AT keyboard driver */
+ 
 @@ -889,7 +889,8 @@
  #define SW_MUTE_DEVICE		0x0e  /* set = device disabled */
  #define SW_PEN_INSERTED		0x0f  /* set = pen inserted */
@@ -898,6 +907,15 @@ diff -Naur old/include/linux/freebsd/input-event-codes.h new/include/linux/freeb
 diff -Naur old/include/linux/linux/input-event-codes.h new/include/linux/linux/input-event-codes.h
 --- old/include/linux/linux/input-event-codes.h	2024-01-01 00:00:00.000000000 +0800
 +++ new/include/linux/linux/input-event-codes.h	2024-01-01 00:00:00.000000000 +0800
+@@ -335,7 +335,7 @@
+ #define KEY_WIMAX		KEY_WWAN
+ #define KEY_RFKILL		247	/* Key that controls all radios */
+ 
+-#define KEY_MICMUTE		248	/* Mute / unmute the microphone */
++#define KEY_MICMUTE		251	/* Mute / unmute the microphone */
+ 
+ /* Code 255 is reserved for special needs of AT keyboard driver */
+ 
 @@ -889,7 +889,8 @@
  #define SW_MUTE_DEVICE		0x0e  /* set = device disabled */
  #define SW_PEN_INSERTED		0x0f  /* set = pen inserted */
