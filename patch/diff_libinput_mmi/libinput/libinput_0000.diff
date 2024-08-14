@@ -961,7 +961,7 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
   * @ingroup device
   *
   * Check if a @ref LIBINPUT_DEVICE_CAP_SWITCH device has a switch of the
-@@ -6124,7 +6731,102 @@
+@@ -6124,7 +6731,127 @@
  unsigned int
  libinput_device_config_rotation_get_default_angle(struct libinput_device *device);
  
@@ -1059,6 +1059,31 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
 +
 +enum libinput_button_state
 +libinput_event_joystick_button_get_key_state(struct libinput_event_joystick_button* event);
++
++/**
++ * @ingroup config
++ *
++ * Enable to config the right button area on the click-touchpad without
++ * physic buttons. Once the configuration is changed, the right button
++ * area will take effect at next sync report. See the libinput documentation
++ * for details.
++ *
++ * @note Configuration changes may not take effect immediately. The
++ * configuration fails to take effect if touchpad is not click-touchpad,
++ * with physical button or middle button. Other scenarios, such as touchpad
++ * with Apple quirks, also cause the configuration fails to take effect.
++ *
++ * @param libinput A libinput context initialized with
++ * libinput_udev_create_context()
++ * @param height_percent The height percent to config.
++ * @param width_percent The width percent to config.
++ *
++ * @return A config status code. If the param is valid the feature always
++ * succeeds.
++ */
++enum libinput_config_status
++libinput_config_rightbutton_area(struct libinput *libinput,
++                const int32_t height_percent, const int32_t width_percent);
  #ifdef __cplusplus
  }
  #endif
@@ -2124,7 +2149,161 @@ diff -Naur old/src/evdev-joystick.h new/src/evdev-joystick.h
 diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons.c
 --- old/src/evdev-mt-touchpad-buttons.c	2021-01-01 00:00:00.000000000 +0000
 +++ new/src/evdev-mt-touchpad-buttons.c	2021-01-01 00:00:00.000000000 +0000
-@@ -635,9 +635,9 @@
+@@ -25,6 +25,7 @@
+ 
+ #include <limits.h>
+ #include <math.h>
++#include <pthread.h>
+ #include <string.h>
+ #include "linux/input.h"
+ 
+@@ -43,6 +44,73 @@
+  * The state machine only affects the soft button area code.
+  */
+ 
++struct evdev_rightbutton_area {
++    int32_t scale_x; /* width percent */
++    int32_t scale_y; /* height percent */
++};
++
++struct evdev_rightbutton_config {
++    bool enabled;
++    struct evdev_rightbutton_area effect;
++    struct evdev_rightbutton_area want_effect;
++    pthread_mutex_t mutex;
++};
++
++static inline struct evdev_rightbutton_config *
++evdev_get_rightbutton_config(void)
++{
++    static struct evdev_rightbutton_config rightbutton_config = {
++        .enabled = false,
++        .effect = { 0 },
++        .want_effect = { 0 },
++        .mutex = PTHREAD_MUTEX_INITIALIZER
++    };
++    return &rightbutton_config;
++}
++
++static inline struct evdev_rightbutton_area *
++evdev_get_rightbutton_area(void)
++{
++    return &(evdev_get_rightbutton_config()->effect);
++}
++
++static inline bool
++is_rightbutton_area_config_change(void)
++{
++    struct evdev_rightbutton_config *rightbutton_config =
++                                     evdev_get_rightbutton_config();
++    return (rightbutton_config->effect.scale_x !=
++            rightbutton_config->want_effect.scale_x) ||
++           (rightbutton_config->effect.scale_y !=
++            rightbutton_config->want_effect.scale_y);
++}
++
++static bool
++evdev_clickpad_rightbutton_apply_config(void)
++{
++    if (!is_rightbutton_area_config_change()) {
++        return false;
++    }
++
++    struct evdev_rightbutton_config *rightbutton_config =
++                                     evdev_get_rightbutton_config();
++    if (pthread_mutex_trylock(&rightbutton_config->mutex) != 0) {
++        return false;
++    }
++
++    memcpy(&rightbutton_config->effect,
++           &rightbutton_config->want_effect,
++           sizeof(rightbutton_config->effect));
++
++    pthread_mutex_unlock(&rightbutton_config->mutex);
++}
++
++static inline bool
++is_rightbutton_area_enable(void)
++{
++    return evdev_get_rightbutton_config()->enabled;
++}
++
+ static inline const char*
+ button_state_to_str(enum button_state state)
+ {
+@@ -622,6 +690,62 @@
+ }
+ 
+ static void
++tp_init_rightbutton_area(struct tp_dispatch *tp,
++            struct evdev_device *device)
++{
++    const int32_t percent = 100;
++    const int32_t button_size_y = 10;
++    const double top_size_mult = 1.0;
++    const double top_size_mult_enlarge = 3.0;
++    double width = 0.0;
++    double height = 0.0;
++    double topbutton_height = 0.0;
++    struct device_coords edges = { 0, 0 };
++    struct phys_coords mm = { 0.0, 0.0 };
++    struct evdev_rightbutton_area *rightbutton_area = NULL;
++
++    /* Function returns a pointer to a static variable without checking
++     * whether the pointer is NULL, scale_x or scale_x must be greater
++     * than 0 and less than or equal to 100
++     */
++    rightbutton_area = evdev_get_rightbutton_area();
++    evdev_device_get_size(device, &width, &height);
++    mm.x = width * (percent - rightbutton_area->scale_x) / percent;
++    mm.y = height * (percent - rightbutton_area->scale_y) / percent;
++
++    /* T440s has the top button line, If the height of right button
++     * conflicts with top button line, reserve the height of the top button
++     * line, please pay attention to the call of tp_init_top_softbuttons
++     */
++    if (tp->buttons.has_topbuttons) {
++        if (tp->suspend_reason == 0) {
++            topbutton_height = button_size_y * top_size_mult;
++        } else {
++            topbutton_height = button_size_y * top_size_mult_enlarge;
++        }
++        if (topbutton_height > mm.y) {
++            evdev_log_info(device, "The height of right button area is "
++                                   "conflicts with top button line. top "
++                                   "button height:%lf, right button area "
++                                   "height:%lf\n", topbutton_height, mm.y);
++            mm.y = topbutton_height;
++        }
++    }
++
++    edges = evdev_device_mm_to_units(device, &mm);
++    tp->buttons.bottom_area.rightbutton_left_edge = edges.x;
++    tp->buttons.bottom_area.top_edge = edges.y;
++    tp->buttons.bottom_area.middlebutton_left_edge = INT_MAX;
++    /* If right button area config, don't init middlebutton software area
++     * regardless of wether middlebutton emulation enabled or disabled
++     */
++    if (!device->middlebutton.want_enabled) {
++        evdev_log_info(device, "If right button area is configed, don't "
++                               "init middlebutton software area.\n");
++    }
++}
++
++static void
+ tp_init_softbuttons(struct tp_dispatch *tp,
+ 		    struct evdev_device *device)
+ {
+@@ -630,14 +754,18 @@
+ 	int mb_le, mb_re; /* middle button left/right edge */
+ 	struct phys_coords mm = { 0.0, 0.0 };
+ 
++    if (is_rightbutton_area_enable()) {
++        return tp_init_rightbutton_area(tp, device);
++    }
++
+ 	evdev_device_get_size(device, &width, &height);
+ 
  	/* button height: 10mm or 15% or the touchpad height,
  	   whichever is smaller */
  	if (height * 0.15 > 10)
@@ -2136,7 +2315,15 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
  
  	mm.x = width * 0.5;
  	edges = evdev_device_mm_to_units(device, &mm);
-@@ -1202,10 +1202,11 @@
+@@ -748,6 +876,7 @@
+ 
+ 	switch (tp->buttons.click_method) {
+ 	case LIBINPUT_CONFIG_CLICK_METHOD_BUTTON_AREAS:
++        (void)evdev_clickpad_rightbutton_apply_config();
+ 		tp_init_softbuttons(tp, tp->device);
+ 		break;
+ 	case LIBINPUT_CONFIG_CLICK_METHOD_CLICKFINGER:
+@@ -1202,10 +1331,11 @@
  			return 0;
  	}
  
@@ -2149,7 +2336,7 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
  static int
  tp_post_clickpadbutton_buttons(struct tp_dispatch *tp, uint64_t time)
  {
-@@ -1268,7 +1269,7 @@
+@@ -1268,7 +1398,7 @@
  		} else if (area & RIGHT) {
  			button = BTN_RIGHT;
  		} else if (area & LEFT) {
@@ -2158,6 +2345,42 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
  		} else { /* main or no area (for clickfinger) is always BTN_LEFT */
  			button = BTN_LEFT;
  			want_left_handed = false;
+@@ -1325,3 +1455,35 @@
+ 	return is_inside_top_button_area(tp, t) ||
+ 	       is_inside_bottom_button_area(tp, t);
+ }
++
++void
++evdev_set_rightbutton_area(const int32_t width_percent,
++                           const int32_t height_percent)
++{
++    struct evdev_rightbutton_config *rightbutton_config = NULL;
++    struct evdev_rightbutton_area *rightbutton_area = NULL;
++
++    rightbutton_config = evdev_get_rightbutton_config();
++    rightbutton_area = &rightbutton_config->want_effect;
++    pthread_mutex_lock(&rightbutton_config->mutex);
++    rightbutton_area->scale_x = width_percent;
++    rightbutton_area->scale_y = height_percent;
++    rightbutton_config->enabled = true;
++    pthread_mutex_unlock(&rightbutton_config->mutex);
++}
++
++void
++tp_clickpad_rightbutton_apply_config(struct evdev_device *device)
++{
++    struct tp_dispatch *tp = (struct tp_dispatch*)device->dispatch;
++
++    if ((tp->buttons.click_method !=
++        LIBINPUT_CONFIG_CLICK_METHOD_BUTTON_AREAS) ||
++        (tp->buttons.state != 0)) {
++        return;
++    }
++
++    if (evdev_clickpad_rightbutton_apply_config()) {
++        tp_init_softbuttons(tp, device);
++    }
++}
 diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestures.c
 --- old/src/evdev-mt-touchpad-gestures.c	2021-01-01 00:00:00.000000000 +0000
 +++ new/src/evdev-mt-touchpad-gestures.c	2021-01-01 00:00:00.000000000 +0000
@@ -2827,7 +3050,15 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  }
  
  static void
-@@ -1961,6 +2106,7 @@
+@@ -1912,6 +2057,7 @@
+ 	tp_post_events(tp, time);
+ 	tp_post_process_state(tp, time);
+ 
++    tp_clickpad_rightbutton_apply_config(tp->device);
+ 	tp_clickpad_middlebutton_apply_config(tp->device);
+ 	tp_apply_rotation(tp->device);
+ }
+@@ -1961,6 +2107,7 @@
  		tp_process_msc(tp, e, time);
  		break;
  	case EV_SYN:
@@ -2835,7 +3066,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		tp_handle_state(tp, time);
  #if 0
  		tp_debug_touch_state(tp, device);
-@@ -2855,6 +3001,8 @@
+@@ -2855,6 +3002,8 @@
  	t->tp = tp;
  	t->has_ended = true;
  	t->index = index;
@@ -2844,7 +3075,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  }
  
  static inline void
-@@ -3264,18 +3412,18 @@
+@@ -3264,18 +3413,18 @@
  	if (width < 70.0)
  		return;
  
@@ -2868,7 +3099,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		edges = evdev_device_mm_to_units(device, &mm);
  		tp->palm.upper_edge = edges.y;
  	}
-@@ -3692,6 +3840,10 @@
+@@ -3692,6 +3841,10 @@
  	if (tp->gesture.enabled)
  		device->seat_caps |= EVDEV_DEVICE_GESTURE;
  
@@ -2879,7 +3110,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	return true;
  }
  
-@@ -3875,6 +4027,14 @@
+@@ -3875,6 +4028,14 @@
  
  	tp = zalloc(sizeof *tp);
  
@@ -2894,7 +3125,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	if (!tp_init(tp, device)) {
  		tp_interface_destroy(&tp->base);
  		return NULL;
-@@ -3892,3 +4052,27 @@
+@@ -3892,3 +4053,27 @@
  
  	return &tp->base;
  }
@@ -2979,7 +3210,7 @@ diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
  };
  
  static inline struct tp_dispatch*
-@@ -762,4 +784,19 @@
+@@ -762,4 +784,22 @@
  struct tp_touch*
  tp_thumb_get_touch(struct tp_dispatch *tp);
  
@@ -2997,6 +3228,9 @@ diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
 +tp_tap_original_motion(struct tp_dispatch *tp,
 +		    struct tp_touch *t,
 +		    uint64_t time);
++
++void
++tp_clickpad_rightbutton_apply_config(struct evdev_device *device);
 +
  #endif
 diff -Naur old/src/evdev-tablet.c new/src/evdev-tablet.c
@@ -3686,6 +3920,14 @@ diff -Naur old/src/evdev.h new/src/evdev.h
  	}
  }
  
+@@ -1048,4 +1118,7 @@
+ 	free(kbd);
+ }
+ 
++void evdev_set_rightbutton_area(const int32_t width_percent, 
++                                const int32_t height_percent);
++
+ #endif /* EVDEV_H */
 diff -Naur old/src/libinput-git-version.h new/src/libinput-git-version.h
 --- old/src/libinput-git-version.h	1970-01-01 00:00:00.000000000 +0000
 +++ new/src/libinput-git-version.h	2021-01-01 00:00:00.000000000 +0000
@@ -4345,19 +4587,21 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_event_touch_get_y_transformed(struct libinput_event_touch *event,
  				       uint32_t height)
  {
-@@ -944,7 +1043,7 @@
+@@ -944,7 +1043,80 @@
  }
  
  LIBINPUT_EXPORT double
 -libinput_event_touch_get_y(struct libinput_event_touch *event)
 +libinput_event_touch_get_tool_x(struct libinput_event_touch *event)
- {
- 	struct evdev_device *device = evdev_device(event->base.device);
- 
-@@ -954,9 +1053,358 @@
- 			   LIBINPUT_EVENT_TOUCH_DOWN,
- 			   LIBINPUT_EVENT_TOUCH_MOTION);
- 
++{
++	struct evdev_device *device = evdev_device(event->base.device);
++
++	require_event_type(libinput_event_get_context(&event->base),
++			   event->base.type,
++			   0,
++			   LIBINPUT_EVENT_TOUCH_DOWN,
++			   LIBINPUT_EVENT_TOUCH_MOTION);
++
 +	return evdev_convert_to_mm(device->abs.absinfo_x, event->tool_rect.x);
 +}
 +
@@ -4422,15 +4666,13 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +LIBINPUT_EXPORT double
 +libinput_event_touch_get_tool_width_transformed(struct libinput_event_touch *event,
 +				       uint32_t width)
-+{
-+	struct evdev_device *device = evdev_device(event->base.device);
-+
-+	require_event_type(libinput_event_get_context(&event->base),
-+			   event->base.type,
-+			   0,
-+			   LIBINPUT_EVENT_TOUCH_DOWN,
-+			   LIBINPUT_EVENT_TOUCH_MOTION);
-+
+ {
+ 	struct evdev_device *device = evdev_device(event->base.device);
+ 
+@@ -954,9 +1126,285 @@
+ 			   LIBINPUT_EVENT_TOUCH_DOWN,
+ 			   LIBINPUT_EVENT_TOUCH_MOTION);
+ 
 +	return evdev_device_transform_x(device, event->tool_rect.w, width);
 +}
 +
@@ -5604,7 +5846,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_event_gesture_get_base_event(struct libinput_event_gesture *event)
  {
  	require_event_type(libinput_event_get_context(&event->base),
-@@ -4593,3 +5672,162 @@
+@@ -4593,3 +5672,187 @@
  	}
  }
  #endif
@@ -5767,6 +6009,31 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +    return event->axis.minor;
 +}
 +
++LIBINPUT_EXPORT enum libinput_config_status
++libinput_config_rightbutton_area(struct libinput *libinput,
++                const int32_t height_percent, const int32_t width_percent)
++{
++    const int32_t one_hundred = 100;
++
++    if (libinput == NULL) {
++        return LIBINPUT_CONFIG_STATUS_INVALID;
++    }
++
++    if ((height_percent <= 0 || height_percent > one_hundred) ||
++        (width_percent <= 0 || width_percent > one_hundred)) {
++        log_error(libinput,
++                  "Failed to config right button area of touchpad. "
++                  "Invalid height(%d) or width percent(%d).\n",
++                  height_percent, width_percent);
++        return LIBINPUT_CONFIG_STATUS_INVALID;
++    }
++
++    /* Function returns a pointer to a static variable without checking
++     * whether the pointer is NULL
++     */
++    evdev_set_rightbutton_area(width_percent, height_percent);
++    return LIBINPUT_CONFIG_STATUS_SUCCESS;
++}
 diff -Naur old/src/libinput.h new/src/libinput.h
 --- old/src/libinput.h	2021-01-01 00:00:00.000000000 +0000
 +++ new/src/libinput.h	2021-01-01 00:00:00.000000000 +0000
@@ -6479,7 +6746,7 @@ diff -Naur old/src/libinput.h new/src/libinput.h
  /**
   * @ingroup config
   */
-@@ -6124,7 +6721,102 @@
+@@ -6124,7 +6721,127 @@
  unsigned int
  libinput_device_config_rotation_get_default_angle(struct libinput_device *device);
  
@@ -6577,6 +6844,31 @@ diff -Naur old/src/libinput.h new/src/libinput.h
 +
 +enum libinput_button_state
 +libinput_event_joystick_button_get_key_state(struct libinput_event_joystick_button* event);
++
++/**
++ * @ingroup config
++ *
++ * Enable to config the right button area on the click-touchpad without
++ * physic buttons. Once the configuration is changed, the right button
++ * area will take effect at next sync report. See the libinput documentation
++ * for details.
++ *
++ * @note Configuration changes may not take effect immediately. The
++ * configuration fails to take effect if touchpad is not click-touchpad,
++ * with physical button or middle button. Other scenarios, such as touchpad
++ * with Apple quirks, also cause the configuration fails to take effect.
++ *
++ * @param libinput A libinput context initialized with
++ * libinput_udev_create_context()
++ * @param height_percent The height percent to config.
++ * @param width_percent The width percent to config.
++ *
++ * @return A config status code. If the param is valid the feature always
++ * succeeds.
++ */
++enum libinput_config_status
++libinput_config_rightbutton_area(struct libinput *libinput,
++                const int32_t height_percent, const int32_t width_percent);
  #ifdef __cplusplus
  }
  #endif
