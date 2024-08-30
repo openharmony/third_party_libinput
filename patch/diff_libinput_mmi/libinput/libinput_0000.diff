@@ -2145,6 +2145,15 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
  		} else { /* main or no area (for clickfinger) is always BTN_LEFT */
  			button = BTN_LEFT;
  			want_left_handed = false;
+@@ -1335,7 +1465,7 @@
+ tp_button_touch_active(const struct tp_dispatch *tp,
+ 		       const struct tp_touch *t)
+ {
+-	return t->button.state == BUTTON_STATE_AREA || t->button.has_moved;
++	return t->button.state == BUTTON_STATE_AREA || t->button.state == BUTTON_STATE_BOTTOM || t->button.has_moved;
+ }
+ 
+ bool
 @@ -1345,3 +1475,35 @@
  	return is_inside_top_button_area(tp, t) ||
  	       is_inside_bottom_button_area(tp, t);
