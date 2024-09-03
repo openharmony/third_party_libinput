@@ -114,7 +114,6 @@ ohos_shared_library("libinput-third-mmi") {
     cfi_cross_dso = true
     debug = false
   }
-
   configs = [ ":libinput-third_config" ]
 
   public_configs = [ ":libinput-third_public_config" ]
