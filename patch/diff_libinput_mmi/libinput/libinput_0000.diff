@@ -2031,6 +2031,15 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
  static inline const char*
  button_state_to_str(enum button_state state)
  {
+@@ -520,7 +588,7 @@
+ 	mm = evdev_device_unit_delta_to_mm(tp->device, &delta);
+ 	vector_length = hypot(mm.x, mm.y);
+ 
+-	if (vector_length > 5.0 /* mm */) {
++	if (vector_length > 1.0 /* mm */) {
+ 		t->button.has_moved = true;
+ 
+ 		tp_button_release_other_bottom_touches(tp,
 @@ -622,6 +690,62 @@
  }
  
@@ -2193,17 +2202,18 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
 diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestures.c
 --- old/src/evdev-mt-touchpad-gestures.c	2021-01-01 00:00:00.000000000 +0800
 +++ new/src/evdev-mt-touchpad-gestures.c	2021-01-01 00:00:00.000000000 +0800
-@@ -36,7 +36,8 @@
+@@ -36,7 +36,9 @@
  
  #define HOLD_AND_MOTION_THRESHOLD 0.5 /* mm */
  #define PINCH_DISAMBIGUATION_MOVE_THRESHOLD 1.5 /* mm */
 -
 +#define ROTATE_DELTA_ANGLE_THRESHOLD 5.0 /* ° */
 +#define ROTATE_DELTA_DISTANCE_THRESHOLD 100.0 /* ppi */
++#define TIME_GESTURE_WAIT_ALL_FINGER_DOWN 100000
  enum gesture_event {
  	GESTURE_EVENT_RESET,
  	GESTURE_EVENT_FINGER_DETECTED,
-@@ -124,6 +125,37 @@
+@@ -124,6 +126,37 @@
  }
  
  static void
@@ -2241,7 +2251,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  tp_gesture_init_scroll(struct tp_dispatch *tp)
  {
  	struct phys_coords zero = {0.0, 0.0};
-@@ -170,17 +202,19 @@
+@@ -170,17 +203,19 @@
  	case GESTURE_STATE_SCROLL:
  		tp_gesture_init_scroll(tp);
  		break;
@@ -2267,7 +2277,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  		break;
  	case GESTURE_STATE_POINTER_MOTION:
  		break;
-@@ -233,7 +267,7 @@
+@@ -233,7 +268,7 @@
  		struct device_float_coords unaccel;
  
  		unaccel = tp_scale_to_xaxis(tp, raw);
@@ -2276,7 +2286,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  				      time,
  				      &delta,
  				      &unaccel);
-@@ -920,7 +954,27 @@
+@@ -920,7 +955,27 @@
  	delta.x = abs(first->point.x - second->point.x);
  	delta.y = abs(first->point.y - second->point.y);
  	distance_mm = evdev_device_unit_delta_to_mm(tp->device, &delta);
@@ -2305,7 +2315,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	/* If both touches moved less than a mm, we cannot decide yet */
  	if (first_mm < 1 && second_mm < 1)
  		return;
-@@ -960,9 +1014,9 @@
+@@ -960,9 +1015,9 @@
  		 * This applies to all gestures (2, 3, 4+ fingers), but allows
  		 * more thumb motion on >2 finger gestures during detection.
  		 */
@@ -2318,7 +2328,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  			return;
  		}
  
-@@ -1119,6 +1173,10 @@
+@@ -1119,6 +1174,10 @@
  	tp->gesture.touches[0] = first;
  	tp->gesture.touches[1] = second;
  
@@ -2329,7 +2339,17 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	tp_gesture_handle_event(tp, GESTURE_EVENT_FINGER_DETECTED, time);
  }
  
-@@ -1190,14 +1248,150 @@
+@@ -1143,6 +1202,9 @@
+ static void
+ tp_gesture_handle_state_hold_and_pointer_motion(struct tp_dispatch *tp, uint64_t time)
+ {
++	if (tp->gesture.finger_count > 1)
++		tp_gesture_cancel(tp, time);
++
+ 	if (tp->queued & TOUCHPAD_EVENT_MOTION)
+ 		tp_gesture_post_pointer_motion(tp, time);
+ 
+@@ -1190,14 +1252,150 @@
  			  &delta);
  }
  
@@ -2480,7 +2500,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  	if (!normalized_is_zero(delta) || !device_float_is_zero(raw)) {
  		unaccel = tp_filter_motion_unaccelerated(tp, &raw, time);
-@@ -1205,7 +1399,7 @@
+@@ -1205,7 +1403,7 @@
  		gesture_notify_swipe(&tp->device->base, time,
  				     LIBINPUT_EVENT_GESTURE_SWIPE_UPDATE,
  				     tp->gesture.finger_count,
@@ -2489,7 +2509,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	}
  }
  
-@@ -1269,7 +1463,7 @@
+@@ -1269,7 +1467,7 @@
  		tp_gesture_handle_state_scroll(tp, time);
  
  	if (tp->gesture.state == GESTURE_STATE_SWIPE)
@@ -2498,6 +2518,29 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  	if (tp->gesture.state == GESTURE_STATE_PINCH)
  		tp_gesture_handle_state_pinch(tp, time);
+@@ -1432,12 +1630,22 @@
+ 			active_touches++;
+ 	}
+ 
++	static uint64_t time_start = (uint64_t)(-1);
++	time_start = time_start < time ? time_start : time;
++	if (tp->gesture.finger_count == 0 && active_touches > 0) {
++		time_start = time;
++	}
++
+ 	if (active_touches != tp->gesture.finger_count) {
+ 		/* If all fingers are lifted immediately end the gesture */
+ 		if (active_touches == 0) {
+ 			tp_gesture_stop(tp, time);
+ 			tp->gesture.finger_count = 0;
+ 			tp->gesture.finger_count_pending = 0;
++		} else if (tp->gesture.finger_count < active_touches &&
++			time - time_start < TIME_GESTURE_WAIT_ALL_FINGER_DOWN) {
++			tp->gesture.finger_count = active_touches;
++			tp_gesture_cancel(tp, time);
+ 		/* Immediately switch to new mode to avoid initial latency */
+ 		} else if (!tp->gesture.started) {
+ 			tp->gesture.finger_count = active_touches;
 diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
 --- old/src/evdev-mt-touchpad-tap.c	2021-01-01 00:00:00.000000000 +0800
 +++ new/src/evdev-mt-touchpad-tap.c	2021-01-01 00:00:00.000000000 +0800
