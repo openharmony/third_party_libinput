@@ -2094,7 +2094,7 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
  tp_init_softbuttons(struct tp_dispatch *tp,
  		    struct evdev_device *device)
  {
-@@ -630,14 +754,18 @@
+@@ -630,14 +630,18 @@ tp_init_softbuttons(struct tp_dispatch *tp,
  	int mb_le, mb_re; /* middle button left/right edge */
  	struct phys_coords mm = { 0.0, 0.0 };
  
@@ -2106,12 +2106,13 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
  
  	/* button height: 10mm or 15% or the touchpad height,
  	   whichever is smaller */
- 	if (height * 0.15 > 10)
+-	if (height * 0.15 > 10)
 -		mm.y = height - 10;
-+		mm.y = height - 18;
++	if (height * 0.37 > 25)
++		mm.y = height - 25;
  	else
 -		mm.y = height * 0.85;
-+		mm.y = height * 0.78;
++		mm.y = height * 0.63;
  
  	mm.x = width * 0.5;
  	edges = evdev_device_mm_to_units(device, &mm);
