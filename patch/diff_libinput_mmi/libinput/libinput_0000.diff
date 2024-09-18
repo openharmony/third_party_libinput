@@ -2103,7 +2103,7 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
  tp_init_softbuttons(struct tp_dispatch *tp,
  		    struct evdev_device *device)
  {
-@@ -630,14 +630,18 @@ tp_init_softbuttons(struct tp_dispatch *tp,
+@@ -630,14 +754,18 @@
  	int mb_le, mb_re; /* middle button left/right edge */
  	struct phys_coords mm = { 0.0, 0.0 };
  
@@ -2655,6 +2655,19 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  }
  
  static void
+@@ -335,11 +394,11 @@
+ 		break;
+ 	}
+ 	case TAP_EVENT_TIMEOUT:
+-		tp->tap.state = TAP_STATE_IDLE;
+ 		tp_tap_notify(tp,
+ 			      tp->tap.saved_release_time,
+ 			      nfingers_tapped,
+ 			      LIBINPUT_BUTTON_STATE_RELEASED);
++		tp->tap.state = TAP_STATE_IDLE;
+ 		break;
+ 	case TAP_EVENT_BUTTON:
+ 		tp->tap.state = TAP_STATE_DEAD;
 @@ -1143,6 +1202,9 @@
  	case TAP_STATE_DEAD:
  		tp_tap_dead_handle_event(tp, t, event, time);
@@ -2690,15 +2703,6 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  }
  
  static enum libinput_config_tap_state
-@@ -1499,7 +1545,7 @@
- static inline enum libinput_config_drag_state
- tp_drag_default(struct evdev_device *device)
- {
--	return LIBINPUT_CONFIG_DRAG_ENABLED;
-+	return LIBINPUT_CONFIG_DRAG_DISABLED;
- }
- 
- static enum libinput_config_drag_state
 @@ -1661,3 +1707,63 @@
  		return false;
  	}
