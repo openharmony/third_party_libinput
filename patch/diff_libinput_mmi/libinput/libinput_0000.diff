@@ -2287,18 +2287,59 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  				      time,
  				      &delta,
  				      &unaccel);
-@@ -920,7 +955,27 @@
- 	delta.x = abs(first->point.x - second->point.x);
- 	delta.y = abs(first->point.y - second->point.y);
- 	distance_mm = evdev_device_unit_delta_to_mm(tp->device, &delta);
--
+@@ -874,6 +909,8 @@
+ 	double min_move = 1.5; /* min movement threshold in mm - count this touch */
+ 	double max_move = 4.0; /* max movement threshold in mm - ignore other touch */
+ 	bool is_hold_and_motion;
++	double angle_delta = 0.0;
 +	double distance_delta = 0.0;
+ 
+ 	first_moved = tp_gesture_mm_moved(tp, first);
+ 	first_mm = hypot(first_moved.x, first_moved.y);
+@@ -960,9 +997,29 @@
+ 		 * This applies to all gestures (2, 3, 4+ fingers), but allows
+ 		 * more thumb motion on >2 finger gestures during detection.
+ 		 */
+-		if (tp->thumb.detect_thumbs && thumb_mm < min_move) {
+-			tp_thumb_suppress(tp, thumb);
+-			tp_gesture_cancel(tp, time);
++		if (tp->thumb.detect_thumbs && (thumb_mm < min_move || finger_mm < min_move)) {
++			if (tp->gesture.enabled && tp->gesture.finger_count == 2) {
++				struct device_float_coords delta_coords = device_delta(first->point, second->point);
++				struct normalized_coords normalized = tp_normalize_delta(tp, delta_coords);
++				double distance = normalized_length(normalized);
++				double angle = atan2(normalized.y, normalized.x) * 180.0 / M_PI;
++				angle_delta = angle - tp->gesture.angle;
++				distance_delta = distance - tp->gesture.initial_distance;
++				if (angle_delta > 180.0)
++					angle_delta -= 360.0;
++				else if (angle_delta < -180.0)
++					angle_delta += 360.0;
++
++				if ((fabs(angle_delta) >= ROTATE_DELTA_ANGLE_THRESHOLD) &&
++					(fabs(distance_delta) <= ROTATE_DELTA_DISTANCE_THRESHOLD)) {
++					tp->gesture.angle_delta = angle_delta;
++					tp->gesture.is_rotate = true;
++					tp_gesture_handle_event(tp, GESTURE_EVENT_PINCH, time);
++					return;
++				}
++			}
++			if (fabs(distance_delta) > ROTATE_DELTA_DISTANCE_THRESHOLD)
++				tp_gesture_handle_event(tp, GESTURE_EVENT_PINCH, time);
+ 			return;
+ 		}
+ 
+@@ -1016,7 +1073,26 @@
+ 			return;
+ 		}
+ 	}
+-
 +	if (tp->gesture.enabled && tp->gesture.finger_count == 2) {
 +		struct device_float_coords delta_coords = device_delta(first->point, second->point);
 +		struct normalized_coords normalized = tp_normalize_delta(tp, delta_coords);
 +		double distance = normalized_length(normalized);
 +		double angle = atan2(normalized.y, normalized.x) * 180.0 / M_PI;
-+		double angle_delta = angle - tp->gesture.angle;
++		angle_delta = angle - tp->gesture.angle;
 +		distance_delta = distance - tp->gesture.initial_distance;
 +		if (angle_delta > 180.0)
 +			angle_delta -= 360.0;
@@ -2313,23 +2354,10 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
 +			return;
 +		}
 +	}
- 	/* If both touches moved less than a mm, we cannot decide yet */
- 	if (first_mm < 1 && second_mm < 1)
- 		return;
-@@ -960,9 +1015,9 @@
- 		 * This applies to all gestures (2, 3, 4+ fingers), but allows
- 		 * more thumb motion on >2 finger gestures during detection.
- 		 */
--		if (tp->thumb.detect_thumbs && thumb_mm < min_move) {
--			tp_thumb_suppress(tp, thumb);
--			tp_gesture_cancel(tp, time);
-+		if (tp->thumb.detect_thumbs && (thumb_mm < min_move || finger_mm < min_move)){
-+			if (fabs(distance_delta) > ROTATE_DELTA_DISTANCE_THRESHOLD)
-+				tp_gesture_handle_event(tp, GESTURE_EVENT_PINCH, time);
- 			return;
- 		}
- 
-@@ -1119,6 +1174,10 @@
+ 	/* If the touches are moving away from each other, this is a pinch */
+ 	tp_gesture_handle_event(tp, GESTURE_EVENT_PINCH, time);
+ }
+@@ -1119,6 +1195,10 @@
  	tp->gesture.touches[0] = first;
  	tp->gesture.touches[1] = second;
  
@@ -2340,7 +2368,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	tp_gesture_handle_event(tp, GESTURE_EVENT_FINGER_DETECTED, time);
  }
  
-@@ -1143,6 +1202,9 @@
+@@ -1143,6 +1223,9 @@
  static void
  tp_gesture_handle_state_hold_and_pointer_motion(struct tp_dispatch *tp, uint64_t time)
  {
@@ -2350,7 +2378,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	if (tp->queued & TOUCHPAD_EVENT_MOTION)
  		tp_gesture_post_pointer_motion(tp, time);
  
-@@ -1190,14 +1252,150 @@
+@@ -1190,14 +1273,150 @@
  			  &delta);
  }
  
@@ -2501,7 +2529,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  	if (!normalized_is_zero(delta) || !device_float_is_zero(raw)) {
  		unaccel = tp_filter_motion_unaccelerated(tp, &raw, time);
-@@ -1205,7 +1403,7 @@
+@@ -1205,7 +1424,7 @@
  		gesture_notify_swipe(&tp->device->base, time,
  				     LIBINPUT_EVENT_GESTURE_SWIPE_UPDATE,
  				     tp->gesture.finger_count,
@@ -2510,7 +2538,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	}
  }
  
-@@ -1269,7 +1467,7 @@
+@@ -1269,7 +1488,7 @@
  		tp_gesture_handle_state_scroll(tp, time);
  
  	if (tp->gesture.state == GESTURE_STATE_SWIPE)
@@ -2519,7 +2547,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  	if (tp->gesture.state == GESTURE_STATE_PINCH)
  		tp_gesture_handle_state_pinch(tp, time);
-@@ -1432,12 +1630,22 @@
+@@ -1432,12 +1651,22 @@
  			active_touches++;
  	}
  
@@ -2987,6 +3015,15 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  }
  
  static void
+@@ -812,7 +957,7 @@
+ 	mm = evdev_device_unit_delta_to_mm(tp->device, &delta);
+ 
+ 	/* 1.5mm movement -> unpin */
+-	if (hypot(mm.x, mm.y) >= 1.5) {
++	if (hypot(mm.x, mm.y) >= 5) {
+ 		t->pinned.is_pinned = false;
+ 		return;
+ 	}
 @@ -846,7 +991,6 @@
  	return (t->state == TOUCH_BEGIN || t->state == TOUCH_UPDATE) &&
  		t->palm.state == PALM_NONE &&
