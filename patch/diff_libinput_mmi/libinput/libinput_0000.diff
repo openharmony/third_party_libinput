@@ -2832,15 +2832,26 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  tp_new_touch(struct tp_dispatch *tp, struct tp_touch *t, uint64_t time)
  {
  	if (t->state == TOUCH_BEGIN ||
-@@ -362,6 +391,7 @@
+@@ -346,6 +375,8 @@
+ 		tp->nfingers_down++;
+ 		t->state = TOUCH_UPDATE;
+ 		t->has_ended = false;
++		evdev_log_libinput_info(tp->device,
++		    "nfingers_down: %d, TOUCH_MAYBE_END", tp->nfingers_down);
+ 		return;
+ 	}
+ 
+@@ -362,7 +393,9 @@
  	t->speed.last_speed = 0;
  	t->speed.exceeded_count = 0;
  	t->hysteresis.x_motion_history = 0;
 +	t->seat_slot = -1;
  	tp->queued |= TOUCHPAD_EVENT_MOTION;
++	evdev_log_libinput_info(tp->device, "tp_new_touch");
  }
  
-@@ -515,6 +545,81 @@
+ static inline void
+@@ -515,6 +548,88 @@
  	return absinfo->maximum - (value - absinfo->minimum);
  }
  
@@ -2850,6 +2861,9 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
 +	int seat_slot = t->seat_slot;
 +	if (is_up) {
 +		if (seat_slot == -1) {
++			evdev_log_libinput_info(dispatch->device,
++			    "Report LIBINPUT_EVENT_TOUCHPAD_UP with code: %d but seat_slot = -1, seat_slot: %d",
++				LIBINPUT_EVENT_TOUCHPAD_UP, seat_slot);
 +			return;
 +		}
 +
@@ -2863,6 +2877,8 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
 +		}
 +
 +		tp_tap_original_up(dispatch, t, time);
++		evdev_log_libinput_info(dispatch->device,
++			"Report LIBINPUT_EVENT_TOUCHPAD_UP with code: %d, seat_slot:%d", LIBINPUT_EVENT_TOUCHPAD_UP, seat_slot);
 +		return;
 +	}
 +
@@ -2870,6 +2886,8 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
 +		t->seat_slot = dispatch->orginal.seat_slot_id++;
 +		dispatch->orginal.active_slot_count++;
 +
++		evdev_log_libinput_info(dispatch->device, "Report LIBINPUT_EVENT_TOUCHPAD_DOWN with code: %d, seat_slot: %d",
++			LIBINPUT_EVENT_TOUCHPAD_DOWN, seat_slot);
 +		tp_tap_original_down(dispatch, t, time);
 +		return;
 +	}
@@ -2922,7 +2940,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  static void
  tp_process_absolute(struct tp_dispatch *tp,
  		    const struct input_event *e,
-@@ -524,6 +629,7 @@
+@@ -524,6 +639,7 @@
  
  	switch(e->code) {
  	case ABS_MT_POSITION_X:
@@ -2930,7 +2948,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		evdev_device_check_abs_axis_range(tp->device,
  						  e->code,
  						  e->value);
-@@ -532,6 +638,7 @@
+@@ -532,6 +648,7 @@
  		tp->queued |= TOUCHPAD_EVENT_MOTION;
  		break;
  	case ABS_MT_POSITION_Y:
@@ -2938,7 +2956,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		evdev_device_check_abs_axis_range(tp->device,
  						  e->code,
  						  e->value);
-@@ -540,14 +647,17 @@
+@@ -540,14 +657,17 @@
  		tp->queued |= TOUCHPAD_EVENT_MOTION;
  		break;
  	case ABS_MT_SLOT:
@@ -2956,7 +2974,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  			tp->nactive_slots -= 1;
  			tp_end_sequence(tp, t, time);
  		}
-@@ -559,6 +669,7 @@
+@@ -559,6 +679,7 @@
  		break;
  	case ABS_MT_TOOL_TYPE:
  		t->is_tool_palm = e->value == MT_TOOL_PALM;
@@ -2964,7 +2982,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		t->dirty = true;
  		tp->queued |= TOUCHPAD_EVENT_OTHERAXIS;
  		break;
-@@ -572,6 +683,26 @@
+@@ -572,6 +693,26 @@
  		t->dirty = true;
  		tp->queued |= TOUCHPAD_EVENT_OTHERAXIS;
  		break;
@@ -2991,7 +3009,15 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	}
  }
  
-@@ -783,6 +914,20 @@
+@@ -776,6 +917,7 @@
+ 		case BTN_TOOL_QUADTAP:
+ 		case BTN_TOOL_QUINTTAP:
+ 			tp_fake_finger_set(tp, e->code, !!e->value);
++			evdev_log_libinput_info(tp->device, "e->code: %d, e->value: %d", e->code, e->value);
+ 			break;
+ 		case BTN_0:
+ 		case BTN_1:
+@@ -783,6 +925,20 @@
  			tp_process_trackpoint_button(tp, e, time);
  			break;
  	}
@@ -3012,7 +3038,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  }
  
  static void
-@@ -812,7 +957,8 @@
+@@ -812,7 +968,8 @@
  	mm = evdev_device_unit_delta_to_mm(tp->device, &delta);
  
  	/* 1.5mm movement -> unpin */
@@ -3022,7 +3048,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		t->pinned.is_pinned = false;
  		return;
  	}
-@@ -846,7 +992,6 @@
+@@ -846,7 +1003,6 @@
  	return (t->state == TOUCH_BEGIN || t->state == TOUCH_UPDATE) &&
  		t->palm.state == PALM_NONE &&
  		!t->pinned.is_pinned &&
@@ -3030,7 +3056,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		tp_button_touch_active(tp, t) &&
  		tp_edge_scroll_touch_active(tp, t);
  }
-@@ -1908,6 +2053,7 @@
+@@ -1908,6 +2064,7 @@
  	tp_post_events(tp, time);
  	tp_post_process_state(tp, time);
  
@@ -3038,7 +3064,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	tp_clickpad_middlebutton_apply_config(tp->device);
  	tp_apply_rotation(tp->device);
  }
-@@ -1958,6 +2104,7 @@
+@@ -1958,6 +2115,7 @@
  		tp_process_msc(tp, e, time);
  		break;
  	case EV_SYN:
@@ -3046,16 +3072,17 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		tp_handle_state(tp, time);
  #if 0
  		tp_debug_touch_state(tp, device);
-@@ -2860,6 +3007,8 @@
+@@ -2860,6 +3018,9 @@
  	t->tp = tp;
  	t->has_ended = true;
  	t->index = index;
 +	t->seat_slot = -1;
 +	t->tool_type = -1;
++	evdev_log_libinput_info(tp->device, "tp_init_touch");
  }
  
  static inline void
-@@ -3362,18 +3511,18 @@
+@@ -3362,18 +3523,18 @@
  	if (width < 70.0)
  		return;
  
@@ -3079,7 +3106,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		edges = evdev_device_mm_to_units(device, &mm);
  		tp->palm.upper_edge = edges.y;
  	}
-@@ -3788,6 +3937,10 @@
+@@ -3788,6 +3949,10 @@
  	if (tp->gesture.enabled)
  		device->seat_caps |= EVDEV_DEVICE_GESTURE;
  
@@ -3090,7 +3117,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	return true;
  }
  
-@@ -3971,6 +4124,14 @@
+@@ -3971,6 +4136,14 @@
  
  	tp = zalloc(sizeof *tp);
  
@@ -3105,7 +3132,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	if (!tp_init(tp, device)) {
  		tp_interface_destroy(&tp->base);
  		return NULL;
-@@ -3988,3 +4149,27 @@
+@@ -3988,3 +4161,27 @@
  
  	return &tp->base;
  }
