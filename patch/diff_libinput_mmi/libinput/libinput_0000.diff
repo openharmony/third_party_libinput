@@ -920,6 +920,24 @@ diff -Naur old/hm_src/hm_missing.h new/hm_src/hm_missing.h
 +#define program_invocation_short_name ohos_program_invocation_short_name()
 +
 +#endif
+diff -Naur old/include/config.h new/include/config.h
+--- old/include/config.h	2024-10-22 02:27:39.977208286 +0000
++++ new/include/config.h	2024-10-22 02:32:30.321159327 +0000
+@@ -35,11 +35,11 @@
+ 
+ #define HTTP_DOC_LINK "https://wayland.freedesktop.org/libinput/doc/1.25.0"
+ 
+-#define LIBINPUT_QUIRKS_DIR "/etc/libinput/quirks"
++#define LIBINPUT_QUIRKS_DIR "/sys_prod/etc/libinput/quirks"
+ 
+-#define LIBINPUT_QUIRKS_OVERRIDE_FILE "/etc/libinput/quirks/local-overrides.quirks"
++#define LIBINPUT_QUIRKS_OVERRIDE_FILE "/sys_prod/etc/libinput/quirks/local-overrides.quirks"
+ 
+-#define LIBINPUT_QUIRKS_SRCDIR "/etc/libinput/quirks"
++#define LIBINPUT_QUIRKS_SRCDIR "/sys_prod/etc/libinput/quirks"
+ 
+ #define LIBINPUT_TOOL_PATH "/data/libinput"
+ 
 diff -Naur old/include/linux/freebsd/input-event-codes.h new/include/linux/freebsd/input-event-codes.h
 --- old/include/linux/freebsd/input-event-codes.h	2021-01-01 00:00:00.000000000 +0800
 +++ new/include/linux/freebsd/input-event-codes.h	2021-01-01 00:00:00.000000000 +0800
