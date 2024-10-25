@@ -3077,6 +3077,49 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
 +	touchpad_notify_touch_motion(base, time, slot_idx, seat_slot, pressure, tool_type, axis, &point, &rect);
 +}
 \ No newline at end of file
+diff -Naur old/src/evdev-mt-touchpad-thumb.c new/src/evdev-mt-touchpad-thumb.c
+--- old/src/evdev-mt-touchpad-thumb.c	2024-10-21 02:26:59.034154479 +0000
++++ new/src/evdev-mt-touchpad-thumb.c	2024-10-21 08:41:01.019106399 +0000
+@@ -114,7 +114,7 @@
+ static bool
+ tp_thumb_needs_jail(const struct tp_dispatch *tp, const struct tp_touch *t)
+ {
+-	if (t->point.y < tp->thumb.upper_thumb_line ||
++	if (t->point.y <= tp->thumb.upper_thumb_line ||
+ 	    tp->scroll.method == LIBINPUT_CONFIG_SCROLL_EDGE)
+ 		return false;
+ 
+@@ -360,7 +360,7 @@
+ 
+ 	if (newest &&
+ 	    (newest->initial_time - oldest->initial_time) < THUMB_TIMEOUT &&
+-	    first->point.y < tp->thumb.lower_thumb_line) {
++	    first->point.y <= tp->thumb.lower_thumb_line) {
+ 		tp_thumb_lift(tp);
+ 		return;
+ 	}
+@@ -409,11 +409,18 @@
+ 
+ 	/* detect thumbs by pressure in the bottom 15mm, detect thumbs by
+ 	 * lingering in the bottom 8mm */
+-	mm.y = h * 0.85;
++	if (evdev_device_has_model_quirk(tp->device, QUIRK_MODEL_HUAWEI_FREETOUCH_TOUCHPAD)) {
++		mm.y = h * 1;
++	} else {
++		mm.y = h * 0.85;
++	}
+ 	edges = evdev_device_mm_to_units(device, &mm);
+ 	tp->thumb.upper_thumb_line = edges.y;
+-
+-	mm.y = h * 0.92;
++	if (evdev_device_has_model_quirk(tp->device, QUIRK_MODEL_HUAWEI_FREETOUCH_TOUCHPAD)) {
++		mm.y = h * 1;
++	} else {
++		mm.y = h * 0.92;
++	}
+ 	edges = evdev_device_mm_to_units(device, &mm);
+ 	tp->thumb.lower_thumb_line = edges.y;
+ 
 diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
 --- old/src/evdev-mt-touchpad.c	2021-01-01 00:00:00.000000000 +0800
 +++ new/src/evdev-mt-touchpad.c	2021-01-01 00:00:00.000000000 +0800
