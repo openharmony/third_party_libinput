@@ -12,8 +12,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 diff -Naur old/export_include/libinput.h new/export_include/libinput.h
---- old/export_include/libinput.h	2021-01-01 00:00:00.000000000 +0800
-+++ new/export_include/libinput.h	2021-01-01 00:00:00.000000000 +0800
+--- old/export_include/libinput.h	2024-10-21 02:26:59.030154337 +0000
++++ new/export_include/libinput.h	2024-10-24 03:50:53.971746365 +0000
 @@ -196,6 +196,22 @@
  	LIBINPUT_DEVICE_CAP_TABLET_PAD = 4,
  	LIBINPUT_DEVICE_CAP_GESTURE = 5,
@@ -158,7 +158,18 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
   * Return the gesture event that is this input event. If the event type does
   * not match the gesture event types, this function returns NULL.
   *
-@@ -1486,6 +1581,21 @@
+@@ -1466,6 +1561,10 @@
+ enum libinput_button_state
+ libinput_event_pointer_get_button_state(struct libinput_event_pointer *event);
+ 
++uint32_t
++libinput_event_pointer_get_button_area(
++	struct libinput_event_pointer *event);
++
+ /**
+  * @ingroup event_pointer
+  *
+@@ -1486,6 +1585,21 @@
  /**
   * @ingroup event_pointer
   *
@@ -1965,8 +1976,8 @@ diff -Naur old/src/evdev-joystick.h new/src/evdev-joystick.h
 +
 +#endif
 diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons.c
---- old/src/evdev-mt-touchpad-buttons.c	2021-01-01 00:00:00.000000000 +0800
-+++ new/src/evdev-mt-touchpad-buttons.c	2021-01-01 00:00:00.000000000 +0800
+--- old/src/evdev-mt-touchpad-buttons.c	2024-10-21 02:26:59.034154479 +0000
++++ new/src/evdev-mt-touchpad-buttons.c	2024-10-24 03:50:56.899899452 +0000
 @@ -25,6 +25,7 @@
  
  #include <limits.h>
@@ -2163,7 +2174,118 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
  		tp_init_softbuttons(tp, tp->device);
  		break;
  	case LIBINPUT_CONFIG_CLICK_METHOD_CLICKFINGER:
-@@ -1210,10 +1341,11 @@
+@@ -1055,6 +1186,31 @@
+ 	return 0;
+ }
+ 
++#define BUTTON_TIMEOUT ms2us(50)
++static inline bool
++tp_clickfinger_within_time(struct tp_dispatch *tp,
++			       struct tp_touch *t1,
++			       struct tp_touch *t2)
++{
++	uint64_t time = 0;
++	if (!t1 || !t2)
++		return 0;
++
++	if (tp_thumb_ignored(tp, t1) || tp_thumb_ignored(tp, t2))
++		return 0;
++
++	if (t1->initial_time <= t2->initial_time) {
++		time = t2->initial_time - t1->initial_time;
++	} else {
++		time = t1->initial_time - t2->initial_time;
++	}
++
++	if (time < BUTTON_TIMEOUT) {
++		return true;
++	}
++	return false;
++}
++
+ static inline bool
+ tp_clickfinger_within_distance(struct tp_dispatch *tp,
+ 			       struct tp_touch *t1,
+@@ -1111,6 +1267,63 @@
+ }
+ 
+ static uint32_t
++tp_clickfinger_set_button_value(struct tp_dispatch *tp)
++{
++	uint32_t button;
++	unsigned int nfingers = 0;
++	struct tp_touch *t;
++	struct tp_touch *first = NULL,
++			*second = NULL;
++
++	tp_for_each_touch(tp, t) {
++		if (t->state != TOUCH_BEGIN && t->state != TOUCH_UPDATE)
++			continue;
++
++		if (tp_thumb_ignored(tp, t))
++			continue;
++
++		if (t->palm.state != PALM_NONE)
++			continue;
++
++		nfingers++;
++
++		if (!first)
++			first = t;
++		else if (!second)
++			second = t;
++	}
++
++	/* Only check for finger distance when there are 2 fingers on the
++	 * touchpad */
++	if (nfingers != 2)
++		return tp->buttons.active;
++
++	if (tp_clickfinger_within_distance(tp, first, second))
++		nfingers = 2;
++	else
++		nfingers = 1;
++
++	if (nfingers == 2 && tp_clickfinger_within_time(tp, first, second)) {
++		nfingers = 2;
++	} else {
++		nfingers = 1;
++	}
++
++	switch (nfingers) {
++	case 0:
++	case 1: button = BTN_LEFT; break;
++	case 2: button = BTN_RIGHT; break;
++	case 3: button = BTN_MIDDLE; break;
++	default:
++		button = 0;
++		break;
++	}
++
++	return button;
++}
++
++
++static uint32_t
+ tp_clickfinger_set_button(struct tp_dispatch *tp)
+ {
+ 	uint32_t button;
+@@ -1197,6 +1410,14 @@
+ 	 * don't end up sending a button event. */
+ 	tp_edge_scroll_stop_events(tp, time);
+ 
++	if (evdev_device_has_model_quirk(tp->device, QUIRK_MODEL_HUAWEI_FREETOUCH_TOUCHPAD) &&
++		state == LIBINPUT_BUTTON_STATE_PRESSED) {
++		button = tp_clickfinger_set_button_value(tp);
++		tp->buttons.active = button;
++
++		if (!button)
++			return 0;
++	}
+ 	/*
+ 	 * If the user has requested clickfinger replace the button chosen
+ 	 * by the softbutton code with one based on the number of fingers.
+@@ -1210,10 +1431,11 @@
  			return 0;
  	}
  
@@ -2176,7 +2298,7 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
  static int
  tp_post_clickpadbutton_buttons(struct tp_dispatch *tp, uint64_t time)
  {
-@@ -1288,7 +1420,7 @@
+@@ -1288,7 +1510,7 @@
  		} else if (area & RIGHT) {
  			button = BTN_RIGHT;
  		} else if (area & LEFT) {
@@ -2185,7 +2307,16 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
  		} else { /* main or no area (for clickfinger) is always BTN_LEFT */
  			button = BTN_LEFT;
  			want_left_handed = false;
-@@ -1335,7 +1467,7 @@
+@@ -1310,7 +1532,7 @@
+ 		tp->buttons.active_is_topbutton = 0;
+ 		state = LIBINPUT_BUTTON_STATE_RELEASED;
+ 	}
+-
++	tp->buttons.area = button;
+ 	tp->buttons.click_pending = false;
+ 
+ 	if (button)
+@@ -1335,7 +1557,7 @@
  tp_button_touch_active(const struct tp_dispatch *tp,
  		       const struct tp_touch *t)
  {
@@ -2194,7 +2325,7 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
  }
  
  bool
-@@ -1345,3 +1477,35 @@
+@@ -1345,3 +1567,35 @@
  	return is_inside_top_button_area(tp, t) ||
  	       is_inside_bottom_button_area(tp, t);
  }
@@ -3536,8 +3667,8 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
 +	return (tp->tool_touches >> shift) & 0x1;
 +}
 diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
---- old/src/evdev-mt-touchpad.h	2021-01-01 00:00:00.000000000 +0800
-+++ new/src/evdev-mt-touchpad.h	2021-01-01 00:00:00.000000000 +0800
+--- old/src/evdev-mt-touchpad.h	2024-10-21 02:26:59.034154479 +0000
++++ new/src/evdev-mt-touchpad.h	2024-10-24 03:32:48.638149321 +0000
 @@ -132,6 +132,7 @@
  	TAP_STATE_2FGTAP_DRAGGING_2,
  	TAP_STATE_3FGTAP_DRAGGING_2,
@@ -3602,7 +3733,15 @@ diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
  		bool is_clickpad;		/* true for clickpads */
  		bool has_topbuttons;
  		bool use_clickfinger;		/* number of fingers decides button number */
-@@ -535,6 +564,12 @@
+@@ -399,6 +428,7 @@
+ 
+ 		enum libinput_config_click_method click_method;
+ 		struct libinput_device_config_click_method config_method;
++		uint32_t area;
+ 	} buttons;
+ 
+ 	struct {
+@@ -535,6 +565,12 @@
  		struct evdev_device *tablet_device;
  		bool tablet_left_handed_state;
  	} left_handed;
@@ -3615,7 +3754,7 @@ diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
  };
  
  static inline struct tp_dispatch*
-@@ -617,7 +652,7 @@
+@@ -617,7 +653,7 @@
  
  bool
  tp_touch_active_for_gesture(const struct tp_dispatch *tp,
@@ -3624,7 +3763,7 @@ diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
  
  int
  tp_tap_handle_state(struct tp_dispatch *tp, uint64_t time);
-@@ -767,4 +802,22 @@
+@@ -767,4 +803,22 @@
  struct tp_touch*
  tp_thumb_get_touch(struct tp_dispatch *tp);
  
@@ -5017,8 +5156,8 @@ diff -Naur old/src/libinput-util.h new/src/libinput-util.h
  	do { \
  	printf("%s() - \033[0;31m", __func__); \
 diff -Naur old/src/libinput.c new/src/libinput.c
---- old/src/libinput.c	2021-01-01 00:00:00.000000000 +0800
-+++ new/src/libinput.c	2021-01-01 00:00:00.000000000 +0800
+--- old/src/libinput.c	2024-10-21 02:26:59.038154620 +0000
++++ new/src/libinput.c	2024-10-24 03:50:55.427822490 +0000
 @@ -36,9 +36,12 @@
  
  #include "libinput.h"
@@ -5243,7 +5382,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  
  	return event->state;
  }
-@@ -694,11 +763,28 @@
+@@ -694,11 +763,45 @@
  	require_event_type(libinput_event_get_context(&event->base),
  			   event->base.type,
  			   0,
@@ -5254,6 +5393,23 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  	return event->seat_button_count;
  }
  
++LIBINPUT_EXPORT uint32_t
++libinput_event_pointer_get_button_area(
++	struct libinput_event_pointer *event)
++{
++	require_event_type(libinput_event_get_context(&event->base),
++			   event->base.type,
++			   0,
++			   LIBINPUT_EVENT_POINTER_BUTTON,
++			   LIBINPUT_EVENT_POINTER_BUTTON_TOUCHPAD);
++
++	struct evdev_device *device = evdev_device(event->base.device);
++	struct evdev_dispatch *dispatch = device->dispatch;
++	struct tp_dispatch *tp = (struct tp_dispatch *)(dispatch);
++
++	return tp->buttons.area;
++}
++
 +LIBINPUT_EXPORT uint32_t
 +libinput_event_pointer_get_finger_count(
 +	struct libinput_event_pointer *event)
@@ -6761,8 +6917,8 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +    return LIBINPUT_CONFIG_STATUS_SUCCESS;
 +}
 diff -Naur old/src/libinput.h new/src/libinput.h
---- old/src/libinput.h	2021-01-01 00:00:00.000000000 +0800
-+++ new/src/libinput.h	2021-01-01 00:00:00.000000000 +0800
+--- old/src/libinput.h	2024-10-21 02:26:59.038154620 +0000
++++ new/src/libinput.h	2024-10-24 03:26:05.323555900 +0000
 @@ -196,6 +196,22 @@
  	LIBINPUT_DEVICE_CAP_TABLET_PAD = 4,
  	LIBINPUT_DEVICE_CAP_GESTURE = 5,
