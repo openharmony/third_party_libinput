@@ -191,7 +191,7 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
   * Check if the event has a valid value for the given axis.
   *
   * If this function returns non-zero for an axis and
-@@ -1870,6 +1980,120 @@
+@@ -1870,6 +1984,120 @@
  				       uint32_t height);
  
  /**
@@ -312,7 +312,7 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
   * @ingroup event_touch
   *
   * @return The generic libinput_event of this event
-@@ -1878,6 +2102,228 @@
+@@ -1878,6 +2106,228 @@
  libinput_event_touch_get_base_event(struct libinput_event_touch *event);
  
  /**
@@ -541,7 +541,7 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
   * @defgroup event_gesture Gesture events
   *
   * Gesture events are generated when a gesture is recognized on a touchpad.
-@@ -2090,6 +2536,49 @@
+@@ -2090,6 +2540,49 @@
  libinput_event_gesture_get_angle_delta(struct libinput_event_gesture *event);
  
  /**
@@ -591,7 +591,7 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
   * @defgroup event_tablet Tablet events
   *
   * Events that come from tools on tablet devices. For events from the pad,
-@@ -2817,6 +3306,19 @@
+@@ -2817,6 +3310,19 @@
  /**
   * @ingroup event_tablet
   *
@@ -611,7 +611,7 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
   * Return the high-level tool type for a tool object.
   *
   * The high level tool describes general interaction expected with the tool.
-@@ -3663,6 +4165,56 @@
+@@ -3663,6 +4169,56 @@
  int
  libinput_dispatch(struct libinput *libinput);
  
@@ -668,7 +668,7 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
  /**
   * @ingroup base
   *
-@@ -4133,6 +4685,42 @@
+@@ -4133,6 +4689,42 @@
  const char *
  libinput_device_get_name(struct libinput_device *device);
  
@@ -711,7 +711,7 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
  /**
   * @ingroup device
   *
-@@ -4343,6 +4931,12 @@
+@@ -4343,6 +4935,12 @@
  libinput_device_touch_get_touch_count(struct libinput_device *device);
  
  /**
@@ -724,7 +724,7 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
   * @ingroup device
   *
   * Check if a @ref LIBINPUT_DEVICE_CAP_SWITCH device has a switch of the
-@@ -5722,6 +6316,9 @@
+@@ -5722,6 +6320,9 @@
  enum libinput_config_click_method
  libinput_device_config_click_get_default_method(struct libinput_device *device);
  
@@ -734,7 +734,7 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
  /**
   * @ingroup config
   */
-@@ -6398,7 +6995,140 @@
+@@ -6398,7 +6999,140 @@
  unsigned int
  libinput_device_config_rotation_get_default_angle(struct libinput_device *device);
  
@@ -2362,20 +2362,24 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
 +    }
 +}
 diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestures.c
---- old/src/evdev-mt-touchpad-gestures.c	2021-01-01 00:00:00.000000000 +0800
-+++ new/src/evdev-mt-touchpad-gestures.c	2021-01-01 00:00:00.000000000 +0800
-@@ -36,7 +36,9 @@
+--- old/src/evdev-mt-touchpad-gestures.c	2024-10-26 08:56:57.950572955 +0000
++++ new/src/evdev-mt-touchpad-gestures.c	2024-10-26 09:33:57.159788215 +0000
+@@ -36,6 +36,14 @@
  
  #define HOLD_AND_MOTION_THRESHOLD 0.5 /* mm */
  #define PINCH_DISAMBIGUATION_MOVE_THRESHOLD 1.5 /* mm */
--
 +#define ROTATE_DELTA_ANGLE_THRESHOLD 10.0 /* ° */
 +#define ROTATE_DELTA_DISTANCE_THRESHOLD 100.0 /* ppi */
 +#define TIME_GESTURE_WAIT_ALL_FINGER_DOWN 100000
++
++#define PRESS_AND_DRAG_LEFT_EDGE_BIT  0x01
++#define PRESS_AND_DRAG_RIGHT_EDGE_BIT 0x02
++#define PRESS_AND_DRAG_UPPER_EDGE_BIT 0x04
++#define PRESS_AND_DRAG_LOWER_EDGE_BIT 0x08
+ 
  enum gesture_event {
  	GESTURE_EVENT_RESET,
- 	GESTURE_EVENT_FINGER_DETECTED,
-@@ -90,7 +92,7 @@
+@@ -90,7 +98,7 @@
  }
  
  static struct device_float_coords
@@ -2384,7 +2388,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  {
  	struct tp_touch *t;
  	unsigned int i, nactive = 0;
-@@ -99,7 +101,7 @@
+@@ -99,7 +107,7 @@
  	for (i = 0; i < tp->num_slots; i++) {
  		t = &tp->touches[i];
  
@@ -2393,7 +2397,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  			continue;
  
  		nactive++;
-@@ -124,6 +126,37 @@
+@@ -124,6 +132,37 @@
  }
  
  static void
@@ -2431,7 +2435,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  tp_gesture_init_scroll(struct tp_dispatch *tp)
  {
  	struct phys_coords zero = {0.0, 0.0};
-@@ -136,15 +169,15 @@
+@@ -136,15 +175,15 @@
  }
  
  static inline struct device_float_coords
@@ -2451,7 +2455,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  }
  
  static void
-@@ -169,18 +202,26 @@
+@@ -169,18 +208,26 @@
  		break;
  	case GESTURE_STATE_SCROLL:
  		tp_gesture_init_scroll(tp);
@@ -2483,7 +2487,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  		break;
  	case GESTURE_STATE_POINTER_MOTION:
  		break;
-@@ -190,15 +231,15 @@
+@@ -190,15 +237,15 @@
  }
  
  static struct device_float_coords
@@ -2502,7 +2506,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  	return raw;
  }
-@@ -216,24 +257,74 @@
+@@ -216,24 +263,95 @@
  	 * it twice (here and in tp_gesture_post_pointer_motion) with the same
  	 * event.
  	 */
@@ -2512,29 +2516,37 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  }
  
 +/*
-+ * Return if any active touch is inside press-and-drag edge area.
++ * Return a bitmask indicating press-and-drag edge areas entered by active touches.
 + */
-+static bool
-+tp_press_and_drag_is_at_edge(struct tp_dispatch *tp, uint64_t time)
++static uint32_t
++tp_move_drag_is_at_edge(struct tp_dispatch *tp, uint64_t time)
 +{
 +	struct tp_touch *t;
 +	unsigned int i;
++
++	uint32_t edgeMask = 0;
 +
 +	for (i = 0; i < tp->num_slots; i++) {
 +		t = &tp->touches[i];
 +
 +		if (!tp_touch_active_for_gesture(tp, t, time))
 +			continue;
-+
-+		if (t->point.x < tp->press_and_drag.left_edge ||
-+			t->point.x > tp->press_and_drag.right_edge ||
-+			t->point.y < tp->press_and_drag.upper_edge ||
-+			t->point.y > tp->press_and_drag.lower_edge) {
-+			return true;
++		
++		if (t->point.x < tp->press_and_drag.left_edge) {
++			edgeMask |= PRESS_AND_DRAG_LEFT_EDGE_BIT;
++		}
++		if (t->point.x > tp->press_and_drag.right_edge) {
++			edgeMask |= PRESS_AND_DRAG_RIGHT_EDGE_BIT;
++		}
++		if (t->point.y < tp->press_and_drag.upper_edge) {
++			edgeMask |= PRESS_AND_DRAG_UPPER_EDGE_BIT;
++		}
++		if (t->point.y > tp->press_and_drag.lower_edge) {
++			edgeMask |= PRESS_AND_DRAG_LOWER_EDGE_BIT;
 +		}
 +	}
 +
-+	return false;
++	return edgeMask;
 +}
 +
  static void
@@ -2545,28 +2557,41 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
 -	raw = tp_get_raw_pointer_motion(tp);
 +	/* reset press-and-drag records */
-+	if (tp->buttons.is_clickpad && !tp->buttons.state) {
++	if (tp->buttons.is_clickpad && !tp->buttons.state && (!tp_tap_dragging(tp))) {
 +		tp->press_and_drag.dir.x = 0.0;
 +		tp->press_and_drag.dir.y = 0.0;
 +		tp->press_and_drag.prev_time = 0;
 +	}
 +
 +	raw = tp_get_raw_pointer_motion(tp, time);
-+	if (tp->buttons.is_clickpad && tp->buttons.state) {
-+		/* update press-and-drag records when the drag is outside edge area */
-+		if (!tp_press_and_drag_is_at_edge(tp, time)) {
-+			double raw_length = hypot(raw.x, raw.y);
-+			if (raw_length > 0.0) {
-+				tp->press_and_drag.dir.x = raw.x / raw_length;
-+				tp->press_and_drag.dir.y = raw.y / raw_length;
++	uint32_t edgeMask = tp_move_drag_is_at_edge(tp, time);
++	if (edgeMask && ((tp->buttons.is_clickpad && tp->buttons.state) || tp_tap_dragging(tp))) {
++		if (tp->press_and_drag.prev_time != 0 && time > tp->press_and_drag.prev_time) {
++			/* reset raw delta according to entered edge areas */
++			if ((edgeMask & PRESS_AND_DRAG_LEFT_EDGE_BIT) || (edgeMask & PRESS_AND_DRAG_RIGHT_EDGE_BIT)) {
++				raw.x = 0.0;
 +			}
-+		/* set raw delta when the drag is inside edge area */
-+		} else if (tp->press_and_drag.prev_time != 0 && time > tp->press_and_drag.prev_time) {
++			if ((edgeMask & PRESS_AND_DRAG_UPPER_EDGE_BIT) || (edgeMask & PRESS_AND_DRAG_LOWER_EDGE_BIT)) {
++				raw.y = 0.0;
++			}
++			/* set raw delta according to entered edge areas */
 +			uint64_t delta_time = time - tp->press_and_drag.prev_time;
-+			raw.x = tp->press_and_drag.dir.x * tp->press_and_drag.speed * delta_time;
-+			raw.y = tp->press_and_drag.dir.y * tp->press_and_drag.speed * delta_time;
++			if (edgeMask & PRESS_AND_DRAG_LEFT_EDGE_BIT) {
++				raw.x -= tp->press_and_drag.speed * delta_time;
++			}
++			if (edgeMask & PRESS_AND_DRAG_RIGHT_EDGE_BIT) {
++				raw.x += tp->press_and_drag.speed * delta_time;
++			}
++			if (edgeMask & PRESS_AND_DRAG_UPPER_EDGE_BIT) {
++				raw.y -= tp->press_and_drag.speed * delta_time;
++			}
++			if (edgeMask & PRESS_AND_DRAG_LOWER_EDGE_BIT) {
++				raw.y += tp->press_and_drag.speed * delta_time;
++			}
 +		}
 +		tp->press_and_drag.prev_time = time;
++	} else {
++		tp->press_and_drag.prev_time = 0;
 +	}
 +
  	delta = tp_filter_motion(tp, &raw, time);
@@ -2580,7 +2605,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  				      time,
  				      &delta,
  				      &unaccel);
-@@ -243,7 +334,7 @@
+@@ -243,7 +361,7 @@
  static unsigned int
  tp_gesture_get_active_touches(const struct tp_dispatch *tp,
  			      struct tp_touch **touches,
@@ -2589,7 +2614,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  {
  	unsigned int n = 0;
  	struct tp_touch *t;
-@@ -251,7 +342,7 @@
+@@ -251,7 +369,7 @@
  	memset(touches, 0, count * sizeof(struct tp_touch *));
  
  	tp_for_each_touch(tp, t) {
@@ -2598,7 +2623,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  			touches[n++] = t;
  			if (n == count)
  				return count;
-@@ -976,6 +1067,19 @@
+@@ -976,6 +1094,19 @@
  			return;
  		}
  
@@ -2618,7 +2643,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  		/* If more than 2 fingers are involved, and the thumb moves
  		 * while the fingers stay still, assume a pinch if eligible.
  		 */
-@@ -1016,7 +1120,27 @@
+@@ -1016,7 +1147,27 @@
  			return;
  		}
  	}
@@ -2647,7 +2672,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	/* If the touches are moving away from each other, this is a pinch */
  	tp_gesture_handle_event(tp, GESTURE_EVENT_PINCH, time);
  }
-@@ -1056,7 +1180,7 @@
+@@ -1056,7 +1207,7 @@
  	unsigned int ntouches;
  	unsigned int i;
  
@@ -2656,7 +2681,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  	first = touches[0];
  	second = touches[1];
-@@ -1119,6 +1243,10 @@
+@@ -1119,6 +1270,10 @@
  	tp->gesture.touches[0] = first;
  	tp->gesture.touches[1] = second;
  
@@ -2667,7 +2692,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	tp_gesture_handle_event(tp, GESTURE_EVENT_FINGER_DETECTED, time);
  }
  
-@@ -1143,6 +1271,9 @@
+@@ -1143,6 +1298,9 @@
  static void
  tp_gesture_handle_state_hold_and_pointer_motion(struct tp_dispatch *tp, uint64_t time)
  {
@@ -2677,17 +2702,17 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	if (tp->queued & TOUCHPAD_EVENT_MOTION)
  		tp_gesture_post_pointer_motion(tp, time);
  
-@@ -1152,7 +1283,8 @@
+@@ -1152,7 +1310,8 @@
  static void
  tp_gesture_handle_state_pointer_motion(struct tp_dispatch *tp, uint64_t time)
  {
 -	if (tp->queued & TOUCHPAD_EVENT_MOTION)
 +	if (tp->queued & TOUCHPAD_EVENT_MOTION ||
-+		(tp->buttons.is_clickpad && tp->buttons.state && tp_press_and_drag_is_at_edge(tp, time)))
++		(((tp->buttons.is_clickpad && tp->buttons.state) || tp_tap_dragging(tp)) && tp_move_drag_is_at_edge(tp, time)))
  		tp_gesture_post_pointer_motion(tp, time);
  }
  
-@@ -1170,11 +1302,12 @@
+@@ -1170,11 +1329,12 @@
  	 */
  	if (time < (tp->gesture.initial_time + DEFAULT_GESTURE_PINCH_TIMEOUT) &&
  	    tp_gesture_is_pinch(tp)) {
@@ -2701,7 +2726,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  	/* scroll is not accelerated by default */
  	delta = tp_filter_scroll(tp, &raw, time);
-@@ -1190,14 +1323,150 @@
+@@ -1190,14 +1350,150 @@
  			  &delta);
  }
  
@@ -2853,7 +2878,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  	if (!normalized_is_zero(delta) || !device_float_is_zero(raw)) {
  		unaccel = tp_filter_motion_unaccelerated(tp, &raw, time);
-@@ -1205,7 +1474,7 @@
+@@ -1205,7 +1501,7 @@
  		gesture_notify_swipe(&tp->device->base, time,
  				     LIBINPUT_EVENT_GESTURE_SWIPE_UPDATE,
  				     tp->gesture.finger_count,
@@ -2862,7 +2887,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	}
  }
  
-@@ -1269,14 +1538,14 @@
+@@ -1269,14 +1565,14 @@
  		tp_gesture_handle_state_scroll(tp, time);
  
  	if (tp->gesture.state == GESTURE_STATE_SWIPE)
@@ -2879,7 +2904,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  {
  	struct tp_touch *thumb;
  	struct phys_coords thumb_moved;
-@@ -1286,7 +1555,7 @@
+@@ -1286,7 +1582,7 @@
  	if (!thumb)
  		return false;
  
@@ -2888,7 +2913,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  		return false;
  
  	thumb_moved = tp_gesture_mm_moved(tp, thumb);
-@@ -1326,7 +1595,7 @@
+@@ -1326,7 +1622,7 @@
  	 * so we may suppress it too early. Give it some time to move.
  	 */
  	if (time < (tp->gesture.initial_time + DEFAULT_GESTURE_PINCH_TIMEOUT) &&
@@ -2897,7 +2922,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  		tp_thumb_reset(tp);
  
  	if (tp->gesture.finger_count <= 4)
-@@ -1428,16 +1697,26 @@
+@@ -1428,16 +1724,26 @@
  	struct tp_touch *t;
  
  	tp_for_each_touch(tp, t) {
@@ -2925,7 +2950,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  		/* Immediately switch to new mode to avoid initial latency */
  		} else if (!tp->gesture.started) {
  			tp->gesture.finger_count = active_touches;
-@@ -1504,6 +1783,38 @@
+@@ -1504,6 +1810,41 @@
  	       LIBINPUT_CONFIG_HOLD_DISABLED;
  }
  
@@ -2938,25 +2963,28 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
 +
 +	evdev_device_get_size(tp->device, &width, &height);
 +
-+	/* press-and-drag edges are 5% of the width/height on each side */
++	/* press-and-drag left edge is 5% of the width */
 +	mm.x = width * 0.05;
 +	device_unit = evdev_device_mm_to_units(tp->device, &mm);
 +	tp->press_and_drag.left_edge = device_unit.x;
 +
++	/* press-and-drag right edge is 5% of the width */
 +	mm.x = width - width * 0.05;
 +	device_unit = evdev_device_mm_to_units(tp->device, &mm);
 +	tp->press_and_drag.right_edge = device_unit.x;
 +
-+	mm.y = height * 0.05;
++	/* press-and-drag upper edge is 8% of the height */
++	mm.y = height * 0.08;
 +	device_unit = evdev_device_mm_to_units(tp->device, &mm);
 +	tp->press_and_drag.upper_edge = device_unit.y;
 +
++	/* press-and-drag lower edge is 5% of the height */
 +	mm.y = height - height * 0.05;
 +	device_unit = evdev_device_mm_to_units(tp->device, &mm);
 +	tp->press_and_drag.lower_edge = device_unit.y;
 +
-+	/* press-and-drag speed is 25% of the diagonal per second */
-+	mm.x = hypot(width, height) * 0.25;
++	/* press-and-drag speed is 20% of the diagonal per second */
++	mm.x = hypot(width, height) * 0.2;
 +	device_unit = evdev_device_mm_to_units(tp->device, &mm);
 +	tp->press_and_drag.speed = (double)device_unit.x / s2us(1);
 +}
@@ -2964,7 +2992,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  void
  tp_init_gesture(struct tp_dispatch *tp)
  {
-@@ -1539,6 +1850,8 @@
+@@ -1539,6 +1880,8 @@
  			    tp_libinput_context(tp),
  			    timer_name,
  			    tp_gesture_hold_timeout, tp);
@@ -5429,7 +5457,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  LIBINPUT_EXPORT int
  libinput_event_pointer_has_axis(struct libinput_event_pointer *event,
  				enum libinput_pointer_axis axis)
-@@ -930,6 +1016,20 @@
+@@ -930,6 +1033,20 @@
  }
  
  LIBINPUT_EXPORT double
@@ -5450,7 +5478,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_event_touch_get_y_transformed(struct libinput_event_touch *event,
  				       uint32_t height)
  {
-@@ -945,7 +1045,22 @@
+@@ -945,7 +1062,109 @@
  }
  
  LIBINPUT_EXPORT double
@@ -5471,13 +5499,15 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +LIBINPUT_EXPORT double
 +libinput_event_touch_get_tool_x_transformed(struct libinput_event_touch *event,
 +				       uint32_t width)
- {
- 	struct evdev_device *device = evdev_device(event->base.device);
- 
-@@ -955,9 +1070,343 @@
- 			   LIBINPUT_EVENT_TOUCH_DOWN,
- 			   LIBINPUT_EVENT_TOUCH_MOTION);
- 
++{
++	struct evdev_device *device = evdev_device(event->base.device);
++
++	require_event_type(libinput_event_get_context(&event->base),
++			   event->base.type,
++			   0,
++			   LIBINPUT_EVENT_TOUCH_DOWN,
++			   LIBINPUT_EVENT_TOUCH_MOTION);
++
 +	return evdev_device_transform_x(device, event->tool_rect.x, width);
 +}
 +
@@ -5556,15 +5586,13 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +LIBINPUT_EXPORT double
 +libinput_event_touch_get_tool_height_transformed(struct libinput_event_touch *event,
 +				       uint32_t height)
-+{
-+	struct evdev_device *device = evdev_device(event->base.device);
-+
-+	require_event_type(libinput_event_get_context(&event->base),
-+			   event->base.type,
-+			   0,
-+			   LIBINPUT_EVENT_TOUCH_DOWN,
-+			   LIBINPUT_EVENT_TOUCH_MOTION);
-+
+ {
+ 	struct evdev_device *device = evdev_device(event->base.device);
+ 
+@@ -955,9 +1174,256 @@
+ 			   LIBINPUT_EVENT_TOUCH_DOWN,
+ 			   LIBINPUT_EVENT_TOUCH_MOTION);
+ 
 +	return evdev_device_transform_y(device, event->tool_rect.h, height);
 +}
 +
@@ -5818,7 +5846,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  LIBINPUT_EXPORT uint32_t
  libinput_event_gesture_get_time(struct libinput_event_gesture *event)
  {
-@@ -1118,6 +1567,44 @@
+@@ -1118,6 +1584,44 @@
  }
  
  LIBINPUT_EXPORT int
@@ -5863,7 +5891,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_event_tablet_tool_x_has_changed(
  				struct libinput_event_tablet_tool *event)
  {
-@@ -1134,6 +1621,24 @@
+@@ -1134,6 +1638,24 @@
  }
  
  LIBINPUT_EXPORT int
@@ -5888,7 +5916,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_event_tablet_tool_y_has_changed(
  				struct libinput_event_tablet_tool *event)
  {
-@@ -1892,11 +2397,8 @@
+@@ -1892,11 +2414,8 @@
  	/* If we fail, we'll fail next time too */
  	libinput->quirks_initialized = true;
  
@@ -5902,7 +5930,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  
  	quirks = quirks_init_subsystem(data_path,
  				       override_file,
-@@ -2396,6 +2898,9 @@
+@@ -2396,6 +2915,9 @@
  	case LIBINPUT_DEVICE_CAP_SWITCH:
  		capability = "CAP_SWITCH";
  		break;
@@ -5912,7 +5940,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  	}
  
  	log_bug_libinput(device->seat->libinput,
-@@ -2459,6 +2964,30 @@
+@@ -2459,6 +2981,30 @@
  }
  
  void
@@ -5943,7 +5971,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  pointer_notify_motion_absolute(struct libinput_device *device,
  			       uint64_t time,
  			       const struct device_coords *point)
-@@ -2511,6 +3040,66 @@
+@@ -2511,6 +3057,66 @@
  }
  
  void
@@ -6010,7 +6038,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  pointer_notify_axis_finger(struct libinput_device *device,
  			  uint64_t time,
  			  uint32_t axes,
-@@ -2643,7 +3232,12 @@
+@@ -2643,7 +3249,12 @@
  			uint64_t time,
  			int32_t slot,
  			int32_t seat_slot,
@@ -6024,7 +6052,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  {
  	struct libinput_event_touch *touch_event;
  
-@@ -2657,6 +3251,11 @@
+@@ -2657,6 +3268,11 @@
  		.slot = slot,
  		.seat_slot = seat_slot,
  		.point = *point,
@@ -6036,7 +6064,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  	};
  
  	post_device_event(device, time,
-@@ -2669,7 +3268,12 @@
+@@ -2669,7 +3285,12 @@
  			  uint64_t time,
  			  int32_t slot,
  			  int32_t seat_slot,
@@ -6050,7 +6078,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  {
  	struct libinput_event_touch *touch_event;
  
-@@ -2683,6 +3287,11 @@
+@@ -2683,6 +3304,11 @@
  		.slot = slot,
  		.seat_slot = seat_slot,
  		.point = *point,
@@ -6062,7 +6090,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  	};
  
  	post_device_event(device, time,
-@@ -2694,7 +3303,8 @@
+@@ -2694,7 +3320,8 @@
  touch_notify_touch_up(struct libinput_device *device,
  		      uint64_t time,
  		      int32_t slot,
@@ -6072,7 +6100,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  {
  	struct libinput_event_touch *touch_event;
  
-@@ -2707,6 +3317,7 @@
+@@ -2707,6 +3334,7 @@
  		.time = time,
  		.slot = slot,
  		.seat_slot = seat_slot,
@@ -6080,7 +6108,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  	};
  
  	post_device_event(device, time,
-@@ -2759,6 +3370,90 @@
+@@ -2759,6 +3387,90 @@
  }
  
  void
@@ -6171,7 +6199,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  tablet_notify_axis(struct libinput_device *device,
  		   uint64_t time,
  		   struct libinput_tablet_tool *tool,
-@@ -2776,6 +3471,7 @@
+@@ -2776,6 +3488,7 @@
  		.proximity_state = LIBINPUT_TABLET_TOOL_PROXIMITY_STATE_IN,
  		.tip_state = tip_state,
  		.axes = *axes,
@@ -6179,7 +6207,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  	};
  
  	memcpy(axis_event->changed_axes,
-@@ -2806,6 +3502,7 @@
+@@ -2806,6 +3519,7 @@
  		.tip_state = LIBINPUT_TABLET_TOOL_TIP_UP,
  		.proximity_state = proximity_state,
  		.axes = *axes,
@@ -6187,7 +6215,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  	};
  	memcpy(proximity_event->changed_axes,
  	       changed_axes,
-@@ -2835,6 +3532,7 @@
+@@ -2835,6 +3549,7 @@
  		.tip_state = tip_state,
  		.proximity_state = LIBINPUT_TABLET_TOOL_PROXIMITY_STATE_IN,
  		.axes = *axes,
@@ -6195,7 +6223,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  	};
  	memcpy(tip_event->changed_axes,
  	       changed_axes,
-@@ -2873,6 +3571,7 @@
+@@ -2873,6 +3588,7 @@
  		.proximity_state = LIBINPUT_TABLET_TOOL_PROXIMITY_STATE_IN,
  		.tip_state = tip_state,
  		.axes = *axes,
@@ -6203,7 +6231,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  	};
  
  	post_device_event(device,
-@@ -2999,6 +3698,7 @@
+@@ -2999,6 +3715,7 @@
  	       bool cancelled,
  	       const struct normalized_coords *delta,
  	       const struct normalized_coords *unaccel,
@@ -6211,7 +6239,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  	       double scale,
  	       double angle)
  {
-@@ -3019,6 +3719,48 @@
+@@ -3019,6 +3736,48 @@
  		.angle = angle,
  	};
  
@@ -6260,7 +6288,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  	post_device_event(device, time, type,
  			  &gesture_event->base);
  }
-@@ -3029,13 +3771,28 @@
+@@ -3029,13 +3788,28 @@
  		     enum libinput_event_type type,
  		     int finger_count,
  		     const struct normalized_coords *delta,
@@ -6291,7 +6319,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  gesture_notify_swipe_end(struct libinput_device *device,
  			 uint64_t time,
  			 int finger_count,
-@@ -3044,7 +3801,7 @@
+@@ -3044,7 +3818,7 @@
  	const struct normalized_coords zero = { 0.0, 0.0 };
  
  	gesture_notify(device, time, LIBINPUT_EVENT_GESTURE_SWIPE_END,
@@ -6300,7 +6328,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  }
  
  void
-@@ -3058,7 +3815,7 @@
+@@ -3058,7 +3832,7 @@
  		     double angle)
  {
  	gesture_notify(device, time, type, finger_count, 0,
@@ -6309,7 +6337,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  }
  
  void
-@@ -3071,7 +3828,7 @@
+@@ -3071,7 +3845,7 @@
  	const struct normalized_coords zero = { 0.0, 0.0 };
  
  	gesture_notify(device, time, LIBINPUT_EVENT_GESTURE_PINCH_END,
@@ -6318,7 +6346,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  }
  
  void
-@@ -3082,7 +3839,7 @@
+@@ -3082,7 +3856,7 @@
  	const struct normalized_coords zero = { 0.0, 0.0 };
  
  	gesture_notify(device, time, LIBINPUT_EVENT_GESTURE_HOLD_BEGIN,
@@ -6327,7 +6355,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  }
  
  void
-@@ -3094,7 +3851,7 @@
+@@ -3094,7 +3868,7 @@
  	const struct normalized_coords zero = { 0.0, 0.0 };
  
  	gesture_notify(device, time, LIBINPUT_EVENT_GESTURE_HOLD_END,
@@ -6336,7 +6364,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  }
  
  void
-@@ -3127,6 +3884,63 @@
+@@ -3127,6 +3901,63 @@
  #endif
  }
  
@@ -6400,7 +6428,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  static void
  libinput_post_event(struct libinput *libinput,
  		    struct libinput_event *event)
-@@ -3180,6 +3994,96 @@
+@@ -3180,6 +4011,96 @@
  	libinput->events_in = (libinput->events_in + 1) % libinput->events_len;
  }
  
@@ -6497,7 +6525,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  LIBINPUT_EXPORT struct libinput_event *
  libinput_get_event(struct libinput *libinput)
  {
-@@ -3263,12 +4167,169 @@
+@@ -3263,12 +4184,169 @@
  	return evdev_device_get_sysname((struct evdev_device *) device);
  }
  
@@ -6667,7 +6695,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  LIBINPUT_EXPORT unsigned int
  libinput_device_get_id_product(struct libinput_device *device)
  {
-@@ -3356,6 +4417,15 @@
+@@ -3356,6 +4434,15 @@
  }
  
  LIBINPUT_EXPORT int
@@ -6683,7 +6711,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_device_switch_has_switch(struct libinput_device *device,
  				  enum libinput_switch sw)
  {
-@@ -3537,7 +4607,8 @@
+@@ -3537,7 +4624,8 @@
  			   LIBINPUT_EVENT_POINTER_SCROLL_WHEEL,
  			   LIBINPUT_EVENT_POINTER_SCROLL_FINGER,
  			   LIBINPUT_EVENT_POINTER_SCROLL_CONTINUOUS,
@@ -6693,7 +6721,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  
  	return &event->base;
  }
-@@ -3558,6 +4629,19 @@
+@@ -3558,6 +4646,19 @@
  }
  
  LIBINPUT_EXPORT struct libinput_event *
@@ -6713,7 +6741,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_event_gesture_get_base_event(struct libinput_event_gesture *event)
  {
  	require_event_type(libinput_event_get_context(&event->base),
-@@ -4764,3 +5848,202 @@
+@@ -4764,3 +5865,202 @@
  	}
  }
  #endif
