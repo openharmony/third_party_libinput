@@ -2363,7 +2363,7 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
 +}
 diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestures.c
 --- old/src/evdev-mt-touchpad-gestures.c	2024-10-26 03:48:48.074185290 +0000
-+++ new/src/evdev-mt-touchpad-gestures.c	2024-10-26 04:02:12.796993670 +0000
++++ new/src/evdev-mt-touchpad-gestures.c	2024-10-26 06:09:46.378209899 +0000
 @@ -36,6 +36,14 @@
  
  #define HOLD_AND_MOTION_THRESHOLD 0.5 /* mm */
@@ -2701,7 +2701,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  {
 -	if (tp->queued & TOUCHPAD_EVENT_MOTION)
 +	if (tp->queued & TOUCHPAD_EVENT_MOTION ||
-+		(((tp->buttons.is_clickpad && tp->buttons.state) || tp_tap_dragging(tp) && tp_move_drag_is_at_edge(tp, time)))
++		(((tp->buttons.is_clickpad && tp->buttons.state) || tp_tap_dragging(tp)) && tp_move_drag_is_at_edge(tp, time)))
  		tp_gesture_post_pointer_motion(tp, time);
  }
  
