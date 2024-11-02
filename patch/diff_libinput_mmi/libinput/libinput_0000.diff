@@ -3181,6 +3181,15 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  		break;
  	case TAP_EVENT_BUTTON:
  		tp->tap.state = TAP_STATE_DEAD;
+@@ -447,7 +506,7 @@
+ 			      tp->tap.saved_press_time,
+ 			      2,
+ 			      LIBINPUT_BUTTON_STATE_PRESSED);
+-		if (tp->tap.drag_enabled) {
++		if (tp->tap.drag_enabled && !evdev_device_has_model_quirk(tp->device, QUIRK_MODEL_HUAWEI_FREETOUCH_TOUCHPAD)) {
+ 			tp->tap.state = TAP_STATE_2FGTAP_TAPPED;
+ 			tp_tap_set_drag_timer(tp, time, 2);
+ 		} else {
 @@ -1143,6 +1202,9 @@
  	case TAP_STATE_DEAD:
  		tp_tap_dead_handle_event(tp, t, event, time);
