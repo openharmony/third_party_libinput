@@ -3381,17 +3381,19 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		return;
  	}
  
-@@ -362,7 +393,9 @@
+@@ -362,7 +393,11 @@
  	t->speed.last_speed = 0;
  	t->speed.exceeded_count = 0;
  	t->hysteresis.x_motion_history = 0;
 +	t->seat_slot = -1;
++	t->is_tool_palm = false;
++	t->tool_type = -1;
  	tp->queued |= TOUCHPAD_EVENT_MOTION;
 +	evdev_log_libinput_info(tp->device, "tp_new_touch");
  }
  
  static inline void
-@@ -515,6 +548,88 @@
+@@ -515,6 +550,88 @@
  	return absinfo->maximum - (value - absinfo->minimum);
  }
  
@@ -3480,7 +3482,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  static void
  tp_process_absolute(struct tp_dispatch *tp,
  		    const struct input_event *e,
-@@ -524,6 +639,7 @@
+@@ -524,6 +641,7 @@
  
  	switch(e->code) {
  	case ABS_MT_POSITION_X:
@@ -3488,7 +3490,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		evdev_device_check_abs_axis_range(tp->device,
  						  e->code,
  						  e->value);
-@@ -532,6 +648,7 @@
+@@ -532,6 +650,7 @@
  		tp->queued |= TOUCHPAD_EVENT_MOTION;
  		break;
  	case ABS_MT_POSITION_Y:
@@ -3496,7 +3498,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		evdev_device_check_abs_axis_range(tp->device,
  						  e->code,
  						  e->value);
-@@ -540,14 +657,17 @@
+@@ -540,14 +659,17 @@
  		tp->queued |= TOUCHPAD_EVENT_MOTION;
  		break;
  	case ABS_MT_SLOT:
@@ -3514,7 +3516,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  			tp->nactive_slots -= 1;
  			tp_end_sequence(tp, t, time);
  		}
-@@ -559,6 +679,7 @@
+@@ -559,6 +681,7 @@
  		break;
  	case ABS_MT_TOOL_TYPE:
  		t->is_tool_palm = e->value == MT_TOOL_PALM;
@@ -3522,7 +3524,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		t->dirty = true;
  		tp->queued |= TOUCHPAD_EVENT_OTHERAXIS;
  		break;
-@@ -572,6 +693,26 @@
+@@ -572,6 +695,26 @@
  		t->dirty = true;
  		tp->queued |= TOUCHPAD_EVENT_OTHERAXIS;
  		break;
@@ -3549,7 +3551,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	}
  }
  
-@@ -776,6 +917,7 @@
+@@ -776,6 +919,7 @@
  		case BTN_TOOL_QUADTAP:
  		case BTN_TOOL_QUINTTAP:
  			tp_fake_finger_set(tp, e->code, !!e->value);
@@ -3557,7 +3559,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  			break;
  		case BTN_0:
  		case BTN_1:
-@@ -783,6 +925,20 @@
+@@ -783,6 +927,20 @@
  			tp_process_trackpoint_button(tp, e, time);
  			break;
  	}
@@ -3578,7 +3580,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  }
  
  static void
-@@ -813,6 +969,7 @@
+@@ -813,6 +971,7 @@
  
  	/* 1.5mm movement -> unpin */
  	if (hypot(mm.x, mm.y) >= 1.5) {
@@ -3586,7 +3588,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		t->pinned.is_pinned = false;
  		return;
  	}
-@@ -841,12 +998,31 @@
+@@ -841,12 +1000,31 @@
  }
  
  bool
@@ -3621,7 +3623,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		tp_button_touch_active(tp, t) &&
  		tp_edge_scroll_touch_active(tp, t);
  }
-@@ -1862,7 +2038,8 @@
+@@ -1862,7 +2040,8 @@
  	ignore_motion |= tp_tap_handle_state(tp, time);
  	ignore_motion |= tp_post_button_events(tp, time);
  
@@ -3631,7 +3633,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		tp_edge_scroll_stop_events(tp, time);
  		tp_gesture_cancel(tp, time);
  		return;
-@@ -1908,6 +2085,7 @@
+@@ -1908,6 +2087,7 @@
  	tp_post_events(tp, time);
  	tp_post_process_state(tp, time);
  
@@ -3639,7 +3641,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	tp_clickpad_middlebutton_apply_config(tp->device);
  	tp_apply_rotation(tp->device);
  }
-@@ -1958,6 +2136,7 @@
+@@ -1958,6 +2138,7 @@
  		tp_process_msc(tp, e, time);
  		break;
  	case EV_SYN:
@@ -3647,7 +3649,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		tp_handle_state(tp, time);
  #if 0
  		tp_debug_touch_state(tp, device);
-@@ -2860,6 +3039,9 @@
+@@ -2860,6 +3041,9 @@
  	t->tp = tp;
  	t->has_ended = true;
  	t->index = index;
@@ -3657,7 +3659,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  }
  
  static inline void
-@@ -3355,6 +3537,10 @@
+@@ -3355,6 +3539,10 @@
  	if (evdev_device_has_model_quirk(device, QUIRK_MODEL_APPLE_TOUCHPAD))
  		return;
  
@@ -3668,7 +3670,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	evdev_device_get_size(device, &width, &height);
  
  	/* Enable edge palm detection on touchpads >= 70 mm. Anything
-@@ -3362,18 +3548,18 @@
+@@ -3362,18 +3550,18 @@
  	if (width < 70.0)
  		return;
  
@@ -3692,7 +3694,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		edges = evdev_device_mm_to_units(device, &mm);
  		tp->palm.upper_edge = edges.y;
  	}
-@@ -3788,6 +3974,10 @@
+@@ -3788,6 +3976,10 @@
  	if (tp->gesture.enabled)
  		device->seat_caps |= EVDEV_DEVICE_GESTURE;
  
@@ -3703,7 +3705,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	return true;
  }
  
-@@ -3971,6 +4161,14 @@
+@@ -3971,6 +4163,14 @@
  
  	tp = zalloc(sizeof *tp);
  
@@ -3718,7 +3720,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	if (!tp_init(tp, device)) {
  		tp_interface_destroy(&tp->base);
  		return NULL;
-@@ -3988,3 +4186,27 @@
+@@ -3988,3 +4188,27 @@
  
  	return &tp->base;
  }
