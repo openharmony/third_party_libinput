@@ -1979,8 +1979,8 @@ diff -Naur old/src/evdev-joystick.h new/src/evdev-joystick.h
 +
 +#endif
 diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons.c
---- old/src/evdev-mt-touchpad-buttons.c	2024-11-07 07:08:00.239774611 +0000
-+++ new/src/evdev-mt-touchpad-buttons.c	2024-11-07 07:23:58.091011550 +0000
+--- old/src/evdev-mt-touchpad-buttons.c	2021-01-01 00:00:00.000000000 +0000
++++ new/src/evdev-mt-touchpad-buttons.c	2021-01-01 00:00:00.000000000 +0000
 @@ -25,6 +25,7 @@
  
  #include <limits.h>
@@ -2401,8 +2401,8 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
 +    }
 +}
 diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestures.c
---- old/src/evdev-mt-touchpad-gestures.c	2024-11-07 07:08:00.239774611 +0000
-+++ new/src/evdev-mt-touchpad-gestures.c	2024-11-07 07:11:47.177342417 +0000
+--- old/src/evdev-mt-touchpad-gestures.c	2021-01-01 00:00:00.000000000 +0000
++++ new/src/evdev-mt-touchpad-gestures.c	2024-11-08 10:56:02.519509196 +0800
 @@ -36,6 +36,14 @@
  
  #define HOLD_AND_MOTION_THRESHOLD 0.5 /* mm */
@@ -3054,7 +3054,16 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  		return false;
  
  	thumb_moved = tp_gesture_mm_moved(tp, thumb);
-@@ -1326,7 +1689,7 @@
+@@ -1307,7 +1670,7 @@
+ 	 */
+ 	if (tp_tap_dragging(tp) ||
+ 	    (tp->buttons.is_clickpad && tp->buttons.state &&
+-	     tp->thumb.state == THUMB_STATE_FINGER)) {
++	     tp->thumb.state == THUMB_STATE_FINGER && tp->nfingers_down < 3)) {
+ 		if (tp->gesture.state != GESTURE_STATE_POINTER_MOTION) {
+ 			tp_gesture_cancel(tp, time);
+ 			tp_gesture_handle_event(tp,
+@@ -1326,9 +1689,13 @@
  	 * so we may suppress it too early. Give it some time to move.
  	 */
  	if (time < (tp->gesture.initial_time + DEFAULT_GESTURE_PINCH_TIMEOUT) &&
@@ -3062,8 +3071,14 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
 +	    tp_gesture_thumb_moved(tp, time))
  		tp_thumb_reset(tp);
  
++	if (tp->buttons.is_clickpad && tp->buttons.state &&
++             tp->thumb.state == THUMB_STATE_FINGER && tp->nfingers_down > 2)
++		return;
++
  	if (tp->gesture.finger_count <= 4)
-@@ -1345,10 +1708,23 @@
+ 		tp_gesture_post_gesture(tp, time, ignore_motion);
+ }
+@@ -1345,10 +1712,23 @@
  }
  
  static void
@@ -3088,7 +3103,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	if (!tp->gesture.started) {
  		tp_gesture_handle_event(tp, GESTURE_EVENT_RESET, time);
  		return;
-@@ -1428,16 +1804,26 @@
+@@ -1428,16 +1808,26 @@
  	struct tp_touch *t;
  
  	tp_for_each_touch(tp, t) {
@@ -3111,12 +3126,12 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  			tp->gesture.finger_count_pending = 0;
 +		} else if (tp->gesture.finger_count < active_touches &&
 +			time - time_start < TIME_GESTURE_WAIT_ALL_FINGER_DOWN) {
-+			tp->gesture.finger_count = active_touches;
 +			tp_gesture_cancel(tp, time);
++			tp->gesture.finger_count = active_touches;
  		/* Immediately switch to new mode to avoid initial latency */
  		} else if (!tp->gesture.started) {
  			tp->gesture.finger_count = active_touches;
-@@ -1504,6 +1890,41 @@
+@@ -1504,6 +1894,41 @@
  	       LIBINPUT_CONFIG_HOLD_DISABLED;
  }
  
@@ -3158,7 +3173,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  void
  tp_init_gesture(struct tp_dispatch *tp)
  {
-@@ -1539,6 +1960,9 @@
+@@ -1539,6 +1964,9 @@
  			    tp_libinput_context(tp),
  			    timer_name,
  			    tp_gesture_hold_timeout, tp);
@@ -3169,8 +3184,8 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  void
 diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
---- old/src/evdev-mt-touchpad-tap.c	2024-11-07 07:08:00.239774611 +0000
-+++ new/src/evdev-mt-touchpad-tap.c	2024-11-07 07:24:10.283476258 +0000
+--- old/src/evdev-mt-touchpad-tap.c	2021-01-01 00:00:00.000000000 +0000
++++ new/src/evdev-mt-touchpad-tap.c	2021-01-01 00:00:00.000000000 +0000
 @@ -88,6 +88,7 @@
  	CASE_RETURN_STRING(TAP_STATE_2FGTAP_DRAGGING_2);
  	CASE_RETURN_STRING(TAP_STATE_3FGTAP_DRAGGING_2);
