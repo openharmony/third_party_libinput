@@ -1979,8 +1979,8 @@ diff -Naur old/src/evdev-joystick.h new/src/evdev-joystick.h
 +
 +#endif
 diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons.c
---- old/src/evdev-mt-touchpad-buttons.c	2021-01-01 00:00:00.000000000 +0000
-+++ new/src/evdev-mt-touchpad-buttons.c	2021-01-01 00:00:00.000000000 +0000
+--- old/src/evdev-mt-touchpad-buttons.c	2024-11-07 07:08:00.239774611 +0000
++++ new/src/evdev-mt-touchpad-buttons.c	2024-11-11 13:04:44.671812677 +0000
 @@ -25,6 +25,7 @@
  
  #include <limits.h>
@@ -2317,11 +2317,13 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
  	/*
  	 * If the user has requested clickfinger replace the button chosen
  	 * by the softbutton code with one based on the number of fingers.
-@@ -1210,10 +1460,11 @@
+@@ -1209,11 +1459,12 @@
+ 		if (!button)
  			return 0;
  	}
- 
+-
 -	evdev_pointer_notify_button(tp->device, time, button, state);
++	evdev_log_libinput_info(tp->device, "notify button:%d, state:%d", button, state);
 +	evdev_pointer_notify_button_touchpad(tp->device, time, button, state);
  	return 1;
  }
@@ -2401,8 +2403,8 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
 +    }
 +}
 diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestures.c
---- old/src/evdev-mt-touchpad-gestures.c	2021-01-01 00:00:00.000000000 +0000
-+++ new/src/evdev-mt-touchpad-gestures.c	2024-11-08 10:56:02.519509196 +0800
+--- old/src/evdev-mt-touchpad-gestures.c	2024-11-07 07:08:00.239774611 +0000
++++ new/src/evdev-mt-touchpad-gestures.c	2024-11-11 13:02:18.801592570 +0000
 @@ -36,6 +36,14 @@
  
  #define HOLD_AND_MOTION_THRESHOLD 0.5 /* mm */
@@ -2549,7 +2551,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  	return raw;
  }
-@@ -216,24 +266,155 @@
+@@ -216,24 +266,159 @@
  	 * it twice (here and in tp_gesture_post_pointer_motion) with the same
  	 * event.
  	 */
@@ -2649,6 +2651,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
 +	return raw;
 +}
 +
++#define TIME_THRESHOLD 8400
  static void
  tp_gesture_post_pointer_motion(struct tp_dispatch *tp, uint64_t time)
  {
@@ -2679,6 +2682,9 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
 +			}
 +			/* set raw delta according to entered edge areas */
 +			uint64_t delta_time = time - tp->press_and_drag.prev_time;
++			if (delta_time > TIME_THRESHOLD) {
++				delta_time = TIME_THRESHOLD;
++			}
 +			if (edgeMask & PRESS_AND_DRAG_LEFT_EDGE_BIT) {
 +				raw.x -= tp->press_and_drag.speed * delta_time;
 +			}
