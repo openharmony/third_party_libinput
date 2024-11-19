@@ -671,7 +671,27 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
  /**
   * @ingroup base
   *
-@@ -4133,6 +4692,42 @@
+@@ -3866,6 +4425,19 @@
+ 			 libinput_log_handler log_handler);
+ 
+ /**
++ * @ingroup base
++ *
++ * Create a keyboard event based on the given touch event.
++ *
++ * @param event_touch The touch event
++ * @param key key code
++ * @param state key state, pressed or released
++ * @return The keyboard event
++ */
++struct libinput_event_keyboard*
++libinput_create_keyboard_event(struct libinput_event_touch* event_touch, int32_t key, enum libinput_key_state state);
++
++/**
+  * @defgroup seat Initialization and manipulation of seats
+  *
+  * A seat has two identifiers, the physical name and the logical name. A
+@@ -4133,6 +4705,42 @@
  const char *
  libinput_device_get_name(struct libinput_device *device);
  
@@ -5797,7 +5817,33 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  };
  
  struct libinput_event_tablet_pad {
-@@ -362,6 +383,7 @@
+@@ -337,6 +358,25 @@
+ 	libinput->log_handler = log_handler;
+ }
+ 
++LIBINPUT_EXPORT struct libinput_event_keyboard*
++libinput_create_keyboard_event(struct libinput_event_touch* event_touch,
++             int32_t key, enum libinput_key_state state)
++{
++    struct libinput_event_keyboard *key_event;
++
++    key_event = zalloc(sizeof *key_event);
++
++    *key_event = (struct libinput_event_keyboard) {
++        .base.device = event_touch->base.device,
++        .base.type = LIBINPUT_EVENT_KEYBOARD_KEY,
++        .time = event_touch->time,
++        .key = key,
++        .state = state,
++    };
++
++    return key_event;
++}
++
+ static void
+ libinput_device_group_destroy(struct libinput_device_group *group);
+ 
+@@ -362,6 +402,7 @@
  	return event->device;
  }
  
@@ -8176,7 +8222,27 @@ diff -Naur old/src/libinput.h new/src/libinput.h
  /**
   * @ingroup base
   *
-@@ -4133,6 +4692,42 @@
+@@ -3866,6 +4425,19 @@
+ 			 libinput_log_handler log_handler);
+ 
+ /**
++ * @ingroup base
++ *
++ * Create a keyboard event based on the given touch event.
++ *
++ * @param event_touch The touch event
++ * @param key key code
++ * @param state key state, pressed or released
++ * @return The keyboard event
++ */
++struct libinput_event_keyboard*
++libinput_create_keyboard_event(struct libinput_event_touch* event_touch, int32_t key, enum libinput_key_state state);
++
++/**
+  * @defgroup seat Initialization and manipulation of seats
+  *
+  * A seat has two identifiers, the physical name and the logical name. A
+@@ -4133,6 +4705,42 @@
  const char *
  libinput_device_get_name(struct libinput_device *device);
  
