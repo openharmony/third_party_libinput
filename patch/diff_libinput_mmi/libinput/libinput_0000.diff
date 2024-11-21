@@ -1311,20 +1311,25 @@ diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
  	} abs;
  
  	struct {
-@@ -191,6 +197,8 @@
+@@ -191,6 +197,11 @@
  static inline enum key_type
  get_key_type(uint16_t code)
  {
 +	const uint16_t KEY_ENDCALL = 0x2e8;
 +	const uint16_t KEY_FUNCTION = 0x2fe;
++	const uint16_t DAGGER_PRESS = 0x2f8;
++	const uint16_t DAGGER_CLICK = 0x2f9;
++	const uint16_t DAGGER_LONG_PRESS = 0x2fa;
  	switch (code) {
  	case BTN_TOOL_PEN:
  	case BTN_TOOL_RUBBER:
-@@ -220,6 +228,8 @@
+@@ -220,6 +231,10 @@
  		return KEY_TYPE_KEY;
  	if (code >= BTN_TRIGGER_HAPPY && code <= BTN_TRIGGER_HAPPY40)
  		return KEY_TYPE_BUTTON;
 +	if (code == KEY_ENDCALL || code == KEY_FUNCTION)
++		return KEY_TYPE_KEY;
++	if (code == DAGGER_PRESS || code == DAGGER_CLICK || code == DAGGER_LONG_PRESS)
 +		return KEY_TYPE_KEY;
  	return KEY_TYPE_NONE;
  }
