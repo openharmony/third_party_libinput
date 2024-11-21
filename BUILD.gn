@@ -12,7 +12,9 @@
 # limitations under the License.
 
 import("//build/ohos.gni")
+import("third_libinput.gni")
 
+defines = third_input_default_defines
 gen_dst_dir = root_out_dir + "/diff_libinput_mmi"
 
 config("libinput-third_config") {
