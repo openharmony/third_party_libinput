@@ -5904,10 +5904,29 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  	libinput->log_handler = log_handler;
  }
  
++#define CAPS_LOCK_FUNCTION_KEY 1
++
++struct vkeyboard_data {
++	bool numLock;
++	bool capsLock;
++	bool scrollLock;
++};
++
++struct vkeyboard_data vkeyboardData = {false, false, false};
++
 +LIBINPUT_EXPORT struct libinput_event_keyboard*
 +libinput_create_keyboard_event(struct libinput_event_touch* event_touch,
 +             int32_t key, enum libinput_key_state state)
 +{
++    struct libinput_device *device = event_touch->base.device;
++
++    if (device->user_data == NULL) {
++        device->user_data = &vkeyboardData;
++    }
++
++    if (key == KEY_CAPSLOCK && state == LIBINPUT_KEY_STATE_PRESSED) {
++        vkeyboardData.capsLock = !vkeyboardData.capsLock;
++    }
 +    struct libinput_event_keyboard *key_event;
 +
 +    key_event = zalloc(sizeof *key_event);
@@ -6576,6 +6595,12 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +LIBINPUT_EXPORT int
 +libinput_get_funckey_state(struct libinput_device *device,  unsigned int code)
 +{
++    if (device->user_data != NULL && code == CAPS_LOCK_FUNCTION_KEY ) {
++        struct vkeyboard_data* vkeyboard_p = (struct vkeyboard_data*)device->user_data;
++	    if (vkeyboard_p != NULL) {
++            return vkeyboard_p->capsLock ? 1 : 0;
++        }
++	}
 +    return evdev_get_event_value((struct evdev_device *)device, EV_LED, code);
 +}
 +
