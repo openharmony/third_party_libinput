@@ -677,7 +677,7 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
  /**
 + * @ingroup base
 + *
-+ * Create a keyboard event based on the given touch event.
++ * Create a keyboard event and store the function key status in user data.
 + *
 + * @param event_touch The touch event
 + * @param key key code
