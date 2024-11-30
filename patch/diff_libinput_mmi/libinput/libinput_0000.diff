@@ -2807,17 +2807,22 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	bool is_hold_and_motion;
  
  	first_moved = tp_gesture_mm_moved(tp, first);
-@@ -941,9 +1166,7 @@
+@@ -941,12 +1166,10 @@
  	if ((!tp->gesture.enabled ||
  	     (distance_mm.x < 40.0 && distance_mm.y < 7.0)) &&
  	    time > (tp->gesture.initial_time + DEFAULT_GESTURE_SWIPE_TIMEOUT)) {
 -		if (tp->gesture.finger_count == 2)
 -			tp_gesture_handle_event(tp, GESTURE_EVENT_SCROLL, time);
 -		else
-+		if (tp->gesture.finger_count != 2)
++		if (tp->gesture.finger_count != 2) {
  			tp_gesture_handle_event(tp, GESTURE_EVENT_SWIPE, time);
+-
+-		return;
++			return;
++		}
+ 	}
  
- 		return;
+ 	/* If one touch exceeds the max_move threshold while the other has not
 @@ -961,6 +1184,11 @@
  		 * more thumb motion on >2 finger gestures during detection.
  		 */
