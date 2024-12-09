@@ -3948,8 +3948,8 @@ diff -Naur old/src/evdev-mt-touchpad-thumb.c new/src/evdev-mt-touchpad-thumb.c
  	tp->thumb.lower_thumb_line = edges.y;
  
 diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
---- old/src/evdev-mt-touchpad.c	2021-01-01 00:00:00.000000000 +0000
-+++ new/src/evdev-mt-touchpad.c	2021-01-01 00:00:00.000000000 +0000
+--- old/src/evdev-mt-touchpad.c	2024-12-02 20:21:23.955773693 +0800
++++ new/src/evdev-mt-touchpad.c	2024-12-09 18:07:51.243249182 +0800
 @@ -38,7 +38,7 @@
  
  #define DEFAULT_TRACKPOINT_ACTIVITY_TIMEOUT ms2us(300)
@@ -4224,11 +4224,13 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  }
  
  static void
-@@ -813,6 +978,7 @@ tp_unpin_finger(const struct tp_dispatch *tp, struct tp_touch *t)
+@@ -812,7 +977,8 @@
+ 	mm = evdev_device_unit_delta_to_mm(tp->device, &delta);
  
  	/* 1.5mm movement -> unpin */
- 	if (hypot(mm.x, mm.y) >= 1.5) {
-+		evdev_log_libinput_info(tp->device, "1.5mm movement -> unpin");
+-	if (hypot(mm.x, mm.y) >= 1.5) {
++	if (hypot(mm.x, mm.y) >= 3.5) {
++		evdev_log_libinput_info(tp->device, "3.5mm movement -> unpin");
  		t->pinned.is_pinned = false;
  		return;
  	}
