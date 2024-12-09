@@ -757,7 +757,7 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
  /**
   * @ingroup config
   */
-@@ -6398,7 +7015,153 @@
+@@ -6398,7 +7015,140 @@
  unsigned int
  libinput_device_config_rotation_get_default_angle(struct libinput_device *device);
  
@@ -837,19 +837,6 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
 + */
 +int32_t
 +libinput_event_touch_get_move_flag(struct libinput_event_touch* event);
-+
-+/**
-+ * @ingroup config
-+ *
-+ * Get the blob_id of the touch screen
-+ *
-+ * @param Carried libinput event
-+ * @return Blob_id value of touch screen
-+ *
-+ * @since 1.4
-+ */
-+int32_t
-+libinput_event_touch_get_blob_id(struct libinput_event_touch* event);
 +
 +/**
 + * @ingroup event_touch
@@ -1070,7 +1057,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
 +	axis = slot->axis;
 +	rect = slot->tool_rect;
 +	evdev_transform_absolute_rect(device, &rect);
-+	touch_notify_touch_down(base, time, slot_idx, seat_slot, slot->pressure, &slot->extraData,
++	touch_notify_touch_down(base, time, slot_idx, seat_slot, slot->pressure, slot->move_flag,
 +				&axis, &point, tool_type, &rect);
  
  	return true;
@@ -1105,7 +1092,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
 +	tool_type = slot->tool_type;
 +	rect = slot->tool_rect;
 +	evdev_transform_absolute_rect(device, &rect);
-+	touch_notify_touch_motion(base, time, slot_idx, seat_slot, slot->pressure, &slot->extraData,
++	touch_notify_touch_motion(base, time, slot_idx, seat_slot, slot->pressure, slot->move_flag,
 +				  &axis, &point, tool_type, &rect);
  
  	return true;
@@ -1129,55 +1116,53 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  
  	return true;
  }
-@@ -354,7 +372,12 @@
+@@ -354,7 +372,11 @@
  	struct libinput_device *base = &device->base;
  	struct libinput_seat *seat = base->seat;
  	struct device_coords point;
 +	const struct device_coord_rect rect = { 0 };
 +	const struct touch_axis axis = { 0 };
-+	const struct extra_data data = { 0, -1 };
  	int seat_slot;
 +	int tool_type;
 +	int32_t pressure = dispatch->abs.pressure;
  
  	if (!(device->seat_caps & EVDEV_DEVICE_TOUCH))
  		return false;
-@@ -376,7 +399,9 @@
+@@ -376,7 +398,9 @@
  	point = dispatch->abs.point;
  	evdev_transform_absolute(device, &point);
  
 -	touch_notify_touch_down(base, time, -1, seat_slot, &point);
 +	tool_type = -1;
 +
-+	touch_notify_touch_down(base, time, -1, seat_slot, pressure, &data, &axis, &point, tool_type, &rect);
++	touch_notify_touch_down(base, time, -1, seat_slot, pressure, -1, &axis, &point, tool_type, &rect);
  
  	return true;
  }
-@@ -388,7 +413,12 @@
+@@ -388,7 +412,11 @@
  {
  	struct libinput_device *base = &device->base;
  	struct device_coords point;
 +	const struct device_coord_rect rect = {0};
 +	const struct touch_axis axis = { 0 };
-+	const struct extra_data data = { 0, -1 };
  	int seat_slot;
 +	int tool_type;
 +	int32_t pressure = dispatch->abs.pressure;
  
  	point = dispatch->abs.point;
  	evdev_transform_absolute(device, &point);
-@@ -398,7 +428,9 @@
+@@ -398,7 +426,9 @@
  	if (seat_slot == -1)
  		return false;
  
 -	touch_notify_touch_motion(base, time, -1, seat_slot, &point);
 +	tool_type = -1;
 +
-+	touch_notify_touch_motion(base, time, -1, seat_slot, pressure, &data, &axis, &point, tool_type, &rect);
++	touch_notify_touch_motion(base, time, -1, seat_slot, pressure, -1, &axis, &point, tool_type, &rect);
  
  	return true;
  }
-@@ -411,6 +443,7 @@
+@@ -411,6 +441,7 @@
  	struct libinput_device *base = &device->base;
  	struct libinput_seat *seat = base->seat;
  	int seat_slot;
@@ -1185,7 +1170,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  
  	if (!(device->seat_caps & EVDEV_DEVICE_TOUCH))
  		return false;
-@@ -423,7 +456,9 @@
+@@ -423,7 +454,9 @@
  
  	seat->slot_map &= ~bit(seat_slot);
  
@@ -1196,7 +1181,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  
  	return true;
  }
-@@ -528,6 +563,14 @@
+@@ -528,6 +561,14 @@
  {
  	struct mt_slot *slot = &dispatch->mt.slots[dispatch->mt.slot];
  
@@ -1211,24 +1196,19 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  	if (e->code == ABS_MT_SLOT) {
  		if ((size_t)e->value >= dispatch->mt.slots_len) {
  			evdev_log_bug_libinput(device,
-@@ -541,6 +584,16 @@
+@@ -541,6 +582,11 @@
  	}
  
  	switch (e->code) {
-+	case ABS_MT_BLOB_ID:
-+		slot->extraData.blob_id = e->value;
-+		dispatch->pending_event |= EVDEV_ABSOLUTE_MT;
-+		slot->dirty = true;
-+		break;
 +	case ABS_MT_MOVEFLAG:
-+        slot->extraData.move_flag = e->value;
++        slot->move_flag = e->value;
 +		dispatch->pending_event |= EVDEV_ABSOLUTE_MT;
 +		slot->dirty = true;
 +		break;
  	case ABS_MT_TRACKING_ID:
  		if (e->value >= 0) {
  			dispatch->pending_event |= EVDEV_ABSOLUTE_MT;
-@@ -598,6 +651,42 @@
+@@ -598,6 +644,42 @@
  			break;
  		}
  		dispatch->pending_event |= EVDEV_ABSOLUTE_MT;
@@ -1271,7 +1251,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  		slot->dirty = true;
  		break;
  	}
-@@ -619,6 +708,10 @@
+@@ -619,6 +701,10 @@
  		dispatch->abs.point.y = e->value;
  		dispatch->pending_event |= EVDEV_ABSOLUTE_MOTION;
  		break;
@@ -1282,16 +1262,16 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  	}
  }
  
-@@ -1556,6 +1649,8 @@
+@@ -1556,6 +1642,8 @@
  
  	for (slot = 0; slot < num_slots; ++slot) {
  		slots[slot].seat_slot = -1;
 +		slots[slot].tool_type = -1;
-+		slots[slot].extraData.move_flag = -1;
++		slots[slot].move_flag = -1;
  
  		if (evdev_need_mtdev(device))
  			continue;
-@@ -1718,3 +1813,11 @@
+@@ -1718,3 +1806,11 @@
  
  	return &dispatch->base;
  }
@@ -1310,7 +1290,7 @@ diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
  
  struct mt_slot {
  	bool dirty;
-+	struct extra_data extraData;
++	int32_t move_flag;
  	enum mt_slot_state state;
  	int32_t seat_slot;
  	struct device_coords point;
@@ -5750,18 +5730,12 @@ diff -Naur old/src/evdev.h new/src/evdev.h
 diff -Naur old/src/libinput-private.h new/src/libinput-private.h
 --- old/src/libinput-private.h	2021-01-01 00:00:00.000000000 +0000
 +++ new/src/libinput-private.h	2021-01-01 00:00:00.000000000 +0000
-@@ -43,12 +43,25 @@
+@@ -43,12 +43,19 @@
  #include "libinput-version.h"
  
  struct libinput_source;
 +struct privacy_switch;
-+
-+/* The extra data of mt_slot struction */
-+struct extra_data {
-+	int32_t blob_id;
-+	int32_t move_flag;
-+};
-
+ 
  /* A coordinate pair in device coordinates */
  struct device_coords {
  	int x, y;
@@ -5776,7 +5750,7 @@ diff -Naur old/src/libinput-private.h new/src/libinput-private.h
  /*
   * A coordinate pair in device coordinates, capable of holding non discrete
   * values, this is necessary e.g. when device coordinates get averaged.
-@@ -424,7 +437,8 @@
+@@ -424,7 +431,8 @@
  	LIBINPUT_TABLET_TOOL_AXIS_SLIDER = 8,
  	LIBINPUT_TABLET_TOOL_AXIS_REL_WHEEL = 9,
  	LIBINPUT_TABLET_TOOL_AXIS_SIZE_MAJOR = 10,
@@ -5786,7 +5760,7 @@ diff -Naur old/src/libinput-private.h new/src/libinput-private.h
  };
  
  #define LIBINPUT_TABLET_TOOL_AXIS_MAX LIBINPUT_TABLET_TOOL_AXIS_SIZE_MINOR
-@@ -463,7 +477,7 @@
+@@ -463,7 +471,7 @@
  		struct threshold threshold; /* in device coordinates */
  		int offset; /* in device coordinates */
  		bool has_offset;
@@ -5795,7 +5769,7 @@ diff -Naur old/src/libinput-private.h new/src/libinput-private.h
  		enum pressure_heuristic_state heuristic_state;
  	} pressure;
  };
-@@ -498,6 +512,20 @@
+@@ -498,6 +506,20 @@
  	void *notify_func_data;
  };
  
@@ -5816,7 +5790,7 @@ diff -Naur old/src/libinput-private.h new/src/libinput-private.h
  typedef void (*libinput_source_dispatch_t)(void *data);
  
  #define log_debug(li_, ...) log_msg((li_), LIBINPUT_LOG_PRIORITY_DEBUG, __VA_ARGS__)
-@@ -506,6 +534,9 @@
+@@ -506,6 +528,9 @@
  #define log_bug_kernel(li_, ...) log_msg((li_), LIBINPUT_LOG_PRIORITY_ERROR, "kernel bug: " __VA_ARGS__)
  #define log_bug_libinput(li_, ...) log_msg((li_), LIBINPUT_LOG_PRIORITY_ERROR, "libinput bug: " __VA_ARGS__)
  #define log_bug_client(li_, ...) log_msg((li_), LIBINPUT_LOG_PRIORITY_ERROR, "client bug: " __VA_ARGS__)
@@ -5826,7 +5800,7 @@ diff -Naur old/src/libinput-private.h new/src/libinput-private.h
  
  #define log_debug_ratelimit(li_, r_, ...) log_msg_ratelimit((li_), (r_), LIBINPUT_LOG_PRIORITY_DEBUG, __VA_ARGS__)
  #define log_info_ratelimit(li_, r_, ...) log_msg_ratelimit((li_), (r_), LIBINPUT_LOG_PRIORITY_INFO, __VA_ARGS__)
-@@ -628,6 +659,12 @@
+@@ -628,6 +653,12 @@
  		      const struct device_float_coords *raw);
  
  void
@@ -5839,7 +5813,7 @@ diff -Naur old/src/libinput-private.h new/src/libinput-private.h
  pointer_notify_motion_absolute(struct libinput_device *device,
  			       uint64_t time,
  			       const struct device_coords *point);
-@@ -639,6 +676,18 @@
+@@ -639,6 +670,18 @@
  		      enum libinput_button_state state);
  
  void
@@ -5858,13 +5832,13 @@ diff -Naur old/src/libinput-private.h new/src/libinput-private.h
  pointer_notify_axis_finger(struct libinput_device *device,
  			   uint64_t time,
  			   uint32_t axes,
-@@ -668,20 +717,31 @@
+@@ -668,20 +711,31 @@
  			uint64_t time,
  			int32_t slot,
  			int32_t seat_slot,
 -			const struct device_coords *point);
 +			int32_t pressure,
-+			const struct extra_data *extraData,
++			int32_t move_flag,
 +            const struct touch_axis *axis,
 +			const struct device_coords *point,
 +			int32_t tool_type,
@@ -5877,7 +5851,7 @@ diff -Naur old/src/libinput-private.h new/src/libinput-private.h
  			  int32_t seat_slot,
 -			  const struct device_coords *point);
 +			  int32_t pressure,
-+			  const struct extra_data *extraData,
++			  int32_t move_flag,
 +              const struct touch_axis *axis,
 +			  const struct device_coords *point,
 +			  int32_t tool_type,
@@ -5893,7 +5867,7 @@ diff -Naur old/src/libinput-private.h new/src/libinput-private.h
  
  void
  touch_notify_touch_cancel(struct libinput_device *device,
-@@ -694,12 +754,53 @@
+@@ -694,12 +748,53 @@
  		   uint64_t time);
  
  void
@@ -5948,7 +5922,7 @@ diff -Naur old/src/libinput-private.h new/src/libinput-private.h
  
  void
  gesture_notify_swipe_end(struct libinput_device *device,
-@@ -725,6 +826,13 @@
+@@ -725,6 +820,13 @@
  			 bool cancelled);
  
  void
@@ -5962,7 +5936,7 @@ diff -Naur old/src/libinput-private.h new/src/libinput-private.h
  gesture_notify_hold(struct libinput_device *device,
  		    uint64_t time,
  		    int finger_count);
-@@ -799,6 +907,17 @@
+@@ -799,6 +901,17 @@
  		     enum libinput_switch sw,
  		     enum libinput_switch_state state);
  
@@ -6161,7 +6135,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  	CASE_RETURN_STRING(LIBINPUT_EVENT_TABLET_TOOL_AXIS);
  	CASE_RETURN_STRING(LIBINPUT_EVENT_TABLET_TOOL_PROXIMITY);
  	CASE_RETURN_STRING(LIBINPUT_EVENT_TABLET_TOOL_TIP);
-@@ -193,6 +206,12 @@
+@@ -193,6 +206,11 @@
  	int32_t slot;
  	int32_t seat_slot;
  	struct device_coords point;
@@ -6169,12 +6143,11 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +	int32_t pressure;
 +	struct touch_axis axis;
 +	int32_t tool_type;
-+	int32_t blob_id;
 +	int32_t move_flag;
  };
  
  struct libinput_event_gesture {
-@@ -202,8 +221,10 @@
+@@ -202,8 +220,10 @@
  	int cancelled;
  	struct normalized_coords delta;
  	struct normalized_coords delta_unaccel;
@@ -6185,7 +6158,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  };
  
  struct libinput_event_tablet_tool {
-@@ -217,6 +238,7 @@
+@@ -217,6 +237,7 @@
  	struct libinput_tablet_tool *tool;
  	enum libinput_tablet_tool_proximity_state proximity_state;
  	enum libinput_tablet_tool_tip_state tip_state;
@@ -6193,7 +6166,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  };
  
  struct libinput_event_tablet_pad {
-@@ -337,6 +359,25 @@
+@@ -337,6 +358,25 @@
  	libinput->log_handler = log_handler;
  }
  
@@ -6219,7 +6192,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  static void
  libinput_device_group_destroy(struct libinput_device_group *group);
  
-@@ -362,6 +403,7 @@
+@@ -362,6 +402,7 @@
  	return event->device;
  }
  
@@ -6227,7 +6200,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  LIBINPUT_EXPORT struct libinput_event_pointer *
  libinput_event_get_pointer_event(struct libinput_event *event)
  {
-@@ -374,7 +416,12 @@
+@@ -374,7 +415,12 @@
  			   LIBINPUT_EVENT_POINTER_SCROLL_WHEEL,
  			   LIBINPUT_EVENT_POINTER_SCROLL_FINGER,
  			   LIBINPUT_EVENT_POINTER_SCROLL_CONTINUOUS,
@@ -6241,7 +6214,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  
  	return (struct libinput_event_pointer *) event;
  }
-@@ -404,6 +451,18 @@
+@@ -404,6 +450,18 @@
  	return (struct libinput_event_touch *) event;
  }
  
@@ -6260,7 +6233,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  LIBINPUT_EXPORT struct libinput_event_gesture *
  libinput_event_get_gesture_event(struct libinput_event *event)
  {
-@@ -417,7 +476,10 @@
+@@ -417,7 +475,10 @@
  			   LIBINPUT_EVENT_GESTURE_PINCH_UPDATE,
  			   LIBINPUT_EVENT_GESTURE_PINCH_END,
  			   LIBINPUT_EVENT_GESTURE_HOLD_BEGIN,
@@ -6272,7 +6245,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  
  	return (struct libinput_event_gesture *) event;
  }
-@@ -473,6 +535,19 @@
+@@ -473,6 +534,19 @@
  	return (struct libinput_event_switch *) event;
  }
  
@@ -6292,7 +6265,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  LIBINPUT_EXPORT uint32_t
  libinput_event_keyboard_get_time(struct libinput_event_keyboard *event)
  {
-@@ -558,18 +633,29 @@
+@@ -558,18 +632,29 @@
  			   LIBINPUT_EVENT_POINTER_SCROLL_WHEEL,
  			   LIBINPUT_EVENT_POINTER_SCROLL_FINGER,
  			   LIBINPUT_EVENT_POINTER_SCROLL_CONTINUOUS,
@@ -6324,7 +6297,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  
  	return event->delta.x;
  }
-@@ -580,7 +666,8 @@
+@@ -580,7 +665,8 @@
  	require_event_type(libinput_event_get_context(&event->base),
  			   event->base.type,
  			   0,
@@ -6334,7 +6307,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  
  	return event->delta.y;
  }
-@@ -592,7 +679,8 @@
+@@ -592,7 +678,8 @@
  	require_event_type(libinput_event_get_context(&event->base),
  			   event->base.type,
  			   0,
@@ -6344,7 +6317,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  
  	return event->delta_raw.x;
  }
-@@ -604,7 +692,8 @@
+@@ -604,7 +691,8 @@
  	require_event_type(libinput_event_get_context(&event->base),
  			   event->base.type,
  			   0,
@@ -6354,7 +6327,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  
  	return event->delta_raw.y;
  }
-@@ -671,7 +760,9 @@
+@@ -671,7 +759,9 @@
  	require_event_type(libinput_event_get_context(&event->base),
  			   event->base.type,
  			   0,
@@ -6365,7 +6338,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  
  	return event->button;
  }
-@@ -682,7 +773,9 @@
+@@ -682,7 +772,9 @@
  	require_event_type(libinput_event_get_context(&event->base),
  			   event->base.type,
  			   0,
@@ -6376,7 +6349,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  
  	return event->state;
  }
-@@ -694,11 +787,45 @@
+@@ -694,11 +786,45 @@
  	require_event_type(libinput_event_get_context(&event->base),
  			   event->base.type,
  			   0,
@@ -6423,7 +6396,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  LIBINPUT_EXPORT int
  libinput_event_pointer_has_axis(struct libinput_event_pointer *event,
  				enum libinput_pointer_axis axis)
-@@ -930,6 +1057,20 @@
+@@ -930,6 +1056,20 @@
  }
  
  LIBINPUT_EXPORT double
@@ -6444,7 +6417,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_event_touch_get_y_transformed(struct libinput_event_touch *event,
  				       uint32_t height)
  {
-@@ -945,7 +1086,51 @@
+@@ -945,7 +1085,36 @@
  }
  
  LIBINPUT_EXPORT double
@@ -6479,6 +6452,19 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +
 +LIBINPUT_EXPORT double
 +libinput_event_touch_get_tool_y(struct libinput_event_touch *event)
+ {
+ 	struct evdev_device *device = evdev_device(event->base.device);
+ 
+@@ -955,9 +1124,329 @@
+ 			   LIBINPUT_EVENT_TOUCH_DOWN,
+ 			   LIBINPUT_EVENT_TOUCH_MOTION);
+ 
++	return evdev_convert_to_mm(device->abs.absinfo_y, event->tool_rect.y);
++}
++
++LIBINPUT_EXPORT double
++libinput_event_touch_get_tool_y_transformed(struct libinput_event_touch *event,
++				       uint32_t height)
 +{
 +	struct evdev_device *device = evdev_device(event->base.device);
 +
@@ -6488,19 +6474,6 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +			   LIBINPUT_EVENT_TOUCH_DOWN,
 +			   LIBINPUT_EVENT_TOUCH_MOTION);
 +
-+	return evdev_convert_to_mm(device->abs.absinfo_y, event->tool_rect.y);
-+}
-+
-+LIBINPUT_EXPORT double
-+libinput_event_touch_get_tool_y_transformed(struct libinput_event_touch *event,
-+				       uint32_t height)
- {
- 	struct evdev_device *device = evdev_device(event->base.device);
-
-@@ -955,9 +1140,314 @@
- 			   LIBINPUT_EVENT_TOUCH_DOWN,
- 			   LIBINPUT_EVENT_TOUCH_MOTION);
-
 +	return evdev_device_transform_y(device, event->tool_rect.y, height);
 +}
 +
@@ -6812,7 +6785,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  LIBINPUT_EXPORT uint32_t
  libinput_event_gesture_get_time(struct libinput_event_gesture *event)
  {
-@@ -1118,6 +1608,44 @@
+@@ -1118,6 +1607,44 @@
  }
  
  LIBINPUT_EXPORT int
@@ -6857,7 +6830,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_event_tablet_tool_x_has_changed(
  				struct libinput_event_tablet_tool *event)
  {
-@@ -1134,6 +1662,24 @@
+@@ -1134,6 +1661,24 @@
  }
  
  LIBINPUT_EXPORT int
@@ -6882,7 +6855,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_event_tablet_tool_y_has_changed(
  				struct libinput_event_tablet_tool *event)
  {
-@@ -1892,11 +2438,8 @@
+@@ -1892,11 +2437,8 @@
  	/* If we fail, we'll fail next time too */
  	libinput->quirks_initialized = true;
  
@@ -6896,7 +6869,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  
  	quirks = quirks_init_subsystem(data_path,
  				       override_file,
-@@ -2396,6 +2939,9 @@
+@@ -2396,6 +2938,9 @@
  	case LIBINPUT_DEVICE_CAP_SWITCH:
  		capability = "CAP_SWITCH";
  		break;
@@ -6906,7 +6879,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  	}
  
  	log_bug_libinput(device->seat->libinput,
-@@ -2459,6 +3005,30 @@
+@@ -2459,6 +3004,30 @@
  }
  
  void
@@ -6937,7 +6910,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  pointer_notify_motion_absolute(struct libinput_device *device,
  			       uint64_t time,
  			       const struct device_coords *point)
-@@ -2511,6 +3081,94 @@
+@@ -2511,6 +3080,94 @@
  }
  
  void
@@ -7032,13 +7005,13 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  pointer_notify_axis_finger(struct libinput_device *device,
  			  uint64_t time,
  			  uint32_t axes,
-@@ -2643,7 +3301,12 @@
+@@ -2643,7 +3300,12 @@
  			uint64_t time,
  			int32_t slot,
  			int32_t seat_slot,
 -			const struct device_coords *point)
 +			int32_t pressure,
-+			const struct extra_data *extraData,
++			int32_t move_flag,
 +            const struct touch_axis *axis,
 +			const struct device_coords *point,
 +			int32_t tool_type,
@@ -7046,26 +7019,25 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  {
  	struct libinput_event_touch *touch_event;
  
-@@ -2657,6 +3320,12 @@
+@@ -2657,6 +3319,11 @@
  		.slot = slot,
  		.seat_slot = seat_slot,
  		.point = *point,
 +		.tool_rect = *tool_rect,
 +		.pressure = pressure,
-+		.blob_id = extraData->blob_id,
-+		.move_flag = extraData->move_flag,
++		.move_flag = move_flag,
 +		.axis = *axis,
 +		.tool_type = tool_type,
  	};
  
  	post_device_event(device, time,
-@@ -2669,7 +3338,12 @@
+@@ -2669,7 +3336,12 @@
  			  uint64_t time,
  			  int32_t slot,
  			  int32_t seat_slot,
 -			  const struct device_coords *point)
 +			  int32_t pressure,
-+			  const struct extra_data *extraData,
++			  int32_t move_flag,
 +              const struct touch_axis *axis,
 +			  const struct device_coords *point,
 +			  int32_t tool_type,
@@ -7073,7 +7045,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  {
  	struct libinput_event_touch *touch_event;
  
-@@ -2683,6 +3357,12 @@
+@@ -2683,6 +3355,11 @@
  		.slot = slot,
  		.seat_slot = seat_slot,
  		.point = *point,
@@ -7081,12 +7053,11 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +		.pressure = pressure,
 +		.axis = *axis,
 +		.tool_type = tool_type,
-+		.blob_id = extraData->blob_id,
-+		.move_flag = extraData->move_flag,
++		.move_flag = move_flag,
  	};
  
  	post_device_event(device, time,
-@@ -2694,7 +3374,8 @@
+@@ -2694,7 +3371,8 @@
  touch_notify_touch_up(struct libinput_device *device,
  		      uint64_t time,
  		      int32_t slot,
@@ -7096,7 +7067,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  {
  	struct libinput_event_touch *touch_event;
  
-@@ -2707,6 +3388,7 @@
+@@ -2707,6 +3385,7 @@
  		.time = time,
  		.slot = slot,
  		.seat_slot = seat_slot,
@@ -7104,7 +7075,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  	};
  
  	post_device_event(device, time,
-@@ -2759,6 +3441,90 @@
+@@ -2759,6 +3438,90 @@
  }
  
  void
@@ -7195,7 +7166,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  tablet_notify_axis(struct libinput_device *device,
  		   uint64_t time,
  		   struct libinput_tablet_tool *tool,
-@@ -2776,6 +3542,7 @@
+@@ -2776,6 +3539,7 @@
  		.proximity_state = LIBINPUT_TABLET_TOOL_PROXIMITY_STATE_IN,
  		.tip_state = tip_state,
  		.axes = *axes,
@@ -7203,7 +7174,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  	};
  
  	memcpy(axis_event->changed_axes,
-@@ -2806,6 +3573,7 @@
+@@ -2806,6 +3570,7 @@
  		.tip_state = LIBINPUT_TABLET_TOOL_TIP_UP,
  		.proximity_state = proximity_state,
  		.axes = *axes,
@@ -7211,7 +7182,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  	};
  	memcpy(proximity_event->changed_axes,
  	       changed_axes,
-@@ -2835,6 +3603,7 @@
+@@ -2835,6 +3600,7 @@
  		.tip_state = tip_state,
  		.proximity_state = LIBINPUT_TABLET_TOOL_PROXIMITY_STATE_IN,
  		.axes = *axes,
@@ -7219,7 +7190,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  	};
  	memcpy(tip_event->changed_axes,
  	       changed_axes,
-@@ -2873,6 +3642,7 @@
+@@ -2873,6 +3639,7 @@
  		.proximity_state = LIBINPUT_TABLET_TOOL_PROXIMITY_STATE_IN,
  		.tip_state = tip_state,
  		.axes = *axes,
@@ -7227,7 +7198,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  	};
  
  	post_device_event(device,
-@@ -2999,6 +3769,7 @@
+@@ -2999,6 +3766,7 @@
  	       bool cancelled,
  	       const struct normalized_coords *delta,
  	       const struct normalized_coords *unaccel,
@@ -7235,7 +7206,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  	       double scale,
  	       double angle)
  {
-@@ -3019,6 +3790,48 @@
+@@ -3019,6 +3787,48 @@
  		.angle = angle,
  	};
  
@@ -7284,7 +7255,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  	post_device_event(device, time, type,
  			  &gesture_event->base);
  }
-@@ -3029,13 +3842,28 @@
+@@ -3029,13 +3839,28 @@
  		     enum libinput_event_type type,
  		     int finger_count,
  		     const struct normalized_coords *delta,
@@ -7315,7 +7286,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  gesture_notify_swipe_end(struct libinput_device *device,
  			 uint64_t time,
  			 int finger_count,
-@@ -3044,7 +3872,7 @@
+@@ -3044,7 +3869,7 @@
  	const struct normalized_coords zero = { 0.0, 0.0 };
  
  	gesture_notify(device, time, LIBINPUT_EVENT_GESTURE_SWIPE_END,
@@ -7324,7 +7295,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  }
  
  void
-@@ -3058,7 +3886,7 @@
+@@ -3058,7 +3883,7 @@
  		     double angle)
  {
  	gesture_notify(device, time, type, finger_count, 0,
@@ -7333,7 +7304,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  }
  
  void
-@@ -3071,7 +3899,7 @@
+@@ -3071,7 +3896,7 @@
  	const struct normalized_coords zero = { 0.0, 0.0 };
  
  	gesture_notify(device, time, LIBINPUT_EVENT_GESTURE_PINCH_END,
@@ -7342,7 +7313,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  }
  
  void
-@@ -3082,7 +3910,7 @@
+@@ -3082,7 +3907,7 @@
  	const struct normalized_coords zero = { 0.0, 0.0 };
  
  	gesture_notify(device, time, LIBINPUT_EVENT_GESTURE_HOLD_BEGIN,
@@ -7351,7 +7322,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  }
  
  void
-@@ -3094,7 +3922,7 @@
+@@ -3094,7 +3919,7 @@
  	const struct normalized_coords zero = { 0.0, 0.0 };
  
  	gesture_notify(device, time, LIBINPUT_EVENT_GESTURE_HOLD_END,
@@ -7360,7 +7331,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  }
  
  void
-@@ -3127,6 +3955,63 @@
+@@ -3127,6 +3952,63 @@
  #endif
  }
  
@@ -7424,7 +7395,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  static void
  libinput_post_event(struct libinput *libinput,
  		    struct libinput_event *event)
-@@ -3180,6 +4065,96 @@
+@@ -3180,6 +4062,96 @@
  	libinput->events_in = (libinput->events_in + 1) % libinput->events_len;
  }
  
@@ -7521,7 +7492,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  LIBINPUT_EXPORT struct libinput_event *
  libinput_get_event(struct libinput *libinput)
  {
-@@ -3263,12 +4238,169 @@
+@@ -3263,12 +4235,169 @@
  	return evdev_device_get_sysname((struct evdev_device *) device);
  }
  
@@ -7691,7 +7662,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  LIBINPUT_EXPORT unsigned int
  libinput_device_get_id_product(struct libinput_device *device)
  {
-@@ -3356,6 +4488,15 @@
+@@ -3356,6 +4485,15 @@
  }
  
  LIBINPUT_EXPORT int
@@ -7707,7 +7678,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_device_switch_has_switch(struct libinput_device *device,
  				  enum libinput_switch sw)
  {
-@@ -3537,7 +4678,8 @@
+@@ -3537,7 +4675,8 @@
  			   LIBINPUT_EVENT_POINTER_SCROLL_WHEEL,
  			   LIBINPUT_EVENT_POINTER_SCROLL_FINGER,
  			   LIBINPUT_EVENT_POINTER_SCROLL_CONTINUOUS,
@@ -7717,7 +7688,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  
  	return &event->base;
  }
-@@ -3558,6 +4700,19 @@
+@@ -3558,6 +4697,19 @@
  }
  
  LIBINPUT_EXPORT struct libinput_event *
@@ -7737,7 +7708,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_event_gesture_get_base_event(struct libinput_event_gesture *event)
  {
  	require_event_type(libinput_event_get_context(&event->base),
-@@ -4764,3 +5919,217 @@
+@@ -4764,3 +5916,202 @@
  	}
  }
  #endif
@@ -7855,21 +7826,6 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +	double range = absInfo->maximum;
 +	double value = event->pressure / range;
 +	return max(0.0, value);
-+}
-+
-+LIBINPUT_EXPORT int32_t
-+libinput_event_touch_get_blob_id(struct libinput_event_touch* event)
-+{
-+    require_event_type(libinput_event_get_context(&event->base),
-+		event->base.type,
-+		0,
-+		LIBINPUT_EVENT_TOUCH_DOWN,
-+		LIBINPUT_EVENT_TOUCH_UP,
-+		LIBINPUT_EVENT_TOUCH_MOTION,
-+		LIBINPUT_EVENT_TOUCH_CANCEL,
-+		LIBINPUT_EVENT_TOUCH_FRAME);
-+
-+	return event->blob_id;
 +}
 +
 +LIBINPUT_EXPORT int32_t
@@ -8701,7 +8657,7 @@ diff -Naur old/src/libinput.h new/src/libinput.h
  /**
   * @ingroup config
   */
-@@ -6398,6 +7015,151 @@
+@@ -6398,6 +7015,138 @@
  unsigned int
  libinput_device_config_rotation_get_default_angle(struct libinput_device *device);
  
@@ -8768,19 +8724,6 @@ diff -Naur old/src/libinput.h new/src/libinput.h
 + */
 +double
 +libinput_event_touch_get_pressure(struct libinput_event_touch* event);
-+
-+/**
-+ * @ingroup config
-+ *
-+ * Get the blob_id of the touch screen
-+ *
-+ * @param Carried libinput event
-+ * @return Blob_id value of touch screen
-+ *
-+ * @since 1.4
-+ */
-+int32_t
-+libinput_event_touch_get_blob_id(struct libinput_event_touch* event);
 +
 +/**
 + * @ingroup config

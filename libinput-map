@@ -18,7 +18,6 @@
         extern "C++" {
             libinput_create_keyboard_event*;
             libinput_event_touch_get_slot*;
-            libinput_event_touch_get_blob_id*;
         };
     local:
         *;
