@@ -3583,17 +3583,26 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  void
 diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
---- old/src/evdev-mt-touchpad-tap.c	2024-11-25 20:36:06.331556779 +0800
-+++ new/src/evdev-mt-touchpad-tap.c	2024-11-25 20:47:48.897709470 +0800
-@@ -88,6 +88,7 @@
+--- old/src/evdev-mt-touchpad-tap.c	2024-12-02 20:21:23.947773357 +0800
++++ new/src/evdev-mt-touchpad-tap.c	2024-12-06 15:44:32.011692390 +0800
+@@ -30,6 +30,7 @@
+ #include "evdev-mt-touchpad.h"
+ 
+ #define DEFAULT_TAP_TIMEOUT_PERIOD ms2us(180)
++#define DEFAULT_DOUBLE_TAP_TIMEOUT_PERIOD ms2us(61)
+ #define DEFAULT_DRAG_TIMEOUT_PERIOD_BASE ms2us(160)
+ #define DEFAULT_DRAG_TIMEOUT_PERIOD_PERFINGER ms2us(20)
+ #define DEFAULT_DRAGLOCK_TIMEOUT_PERIOD ms2us(300)
+@@ -88,6 +89,8 @@
  	CASE_RETURN_STRING(TAP_STATE_2FGTAP_DRAGGING_2);
  	CASE_RETURN_STRING(TAP_STATE_3FGTAP_DRAGGING_2);
  	CASE_RETURN_STRING(TAP_STATE_DEAD);
 +	CASE_RETURN_STRING(TAP_STATE_HOLDING);
++	CASE_RETURN_STRING(TAP_STATE_DOUBLE_TAP);
  	}
  	return NULL;
  }
-@@ -125,6 +126,10 @@
+@@ -125,6 +128,10 @@
  	      int nfingers,
  	      enum libinput_button_state state)
  {
@@ -3604,7 +3613,7 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  	int32_t button;
  	int32_t button_map[2][3] = {
  		{ BTN_LEFT, BTN_RIGHT, BTN_MIDDLE },
-@@ -138,12 +143,16 @@
+@@ -138,12 +145,16 @@
  
  	button = button_map[tp->tap.map][nfingers - 1];
  
@@ -3622,7 +3631,20 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  				    time,
  				    button,
  				    state);
-@@ -264,6 +273,10 @@
+@@ -156,6 +167,12 @@
+ }
+ 
+ static void
++tp_double_tap_set_timer(struct tp_dispatch *tp, uint64_t time)
++{
++	libinput_timer_set(&tp->tap.timer, time + DEFAULT_DOUBLE_TAP_TIMEOUT_PERIOD);
++}
++
++static void
+ tp_tap_set_drag_timer(struct tp_dispatch *tp, uint64_t time,
+ 		      int nfingers_tapped)
+ {
+@@ -264,6 +281,10 @@
  		tp->tap.nfingers_down--;
  		t->tap.state = TAP_TOUCH_STATE_DEAD;
  		tp_tap_clear_timer(tp);
@@ -3633,7 +3655,7 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  		break;
  	case TAP_EVENT_PALM:
  		tp->tap.state = TAP_STATE_IDLE;
-@@ -290,8 +303,48 @@
+@@ -290,8 +311,48 @@
  		tp->tap.state = TAP_STATE_IDLE;
  		break;
  	case TAP_EVENT_MOTION:
@@ -3682,7 +3704,7 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  	case TAP_EVENT_TIMEOUT:
  		break;
  	case TAP_EVENT_BUTTON:
-@@ -309,6 +362,12 @@
+@@ -309,6 +370,40 @@
  	case TAP_EVENT_PALM_UP:
  		break;
  	}
@@ -3692,10 +3714,38 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
 +			      1,
 +			      LIBINPUT_BUTTON_STATE_RELEASED);
 +    }
++}
++
++static void
++tp_tap_double_tapped_handle_event(struct tp_dispatch *tp,
++			   struct tp_touch *t,
++			   enum tap_event event, uint64_t time)
++{
++	switch (event) {
++	case TAP_EVENT_MOTION:
++	case TAP_EVENT_RELEASE:
++	case TAP_EVENT_TOUCH: 
++	case TAP_EVENT_BUTTON:
++	case TAP_EVENT_THUMB:
++	case TAP_EVENT_PALM:
++	case TAP_EVENT_PALM_UP:
++		break;
++	case TAP_EVENT_TIMEOUT:
++		tp_tap_notify(tp,
++				tp->tap.saved_press_time,
++				1,
++				LIBINPUT_BUTTON_STATE_PRESSED);
++		tp_tap_notify(tp,
++				tp->tap.saved_release_time,
++				1,
++				LIBINPUT_BUTTON_STATE_RELEASED);
++		tp->tap.state = TAP_STATE_IDLE;
++		break;
++	}
  }
  
  static void
-@@ -335,11 +394,11 @@
+@@ -335,11 +430,11 @@
  		break;
  	}
  	case TAP_EVENT_TIMEOUT:
@@ -3708,7 +3758,7 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  		break;
  	case TAP_EVENT_BUTTON:
  		tp->tap.state = TAP_STATE_DEAD;
-@@ -447,7 +506,7 @@
+@@ -447,7 +542,7 @@
  			      tp->tap.saved_press_time,
  			      2,
  			      LIBINPUT_BUTTON_STATE_PRESSED);
@@ -3717,39 +3767,40 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  			tp->tap.state = TAP_STATE_2FGTAP_TAPPED;
  			tp_tap_set_drag_timer(tp, time, 2);
  		} else {
-@@ -749,7 +808,6 @@
+@@ -749,17 +844,13 @@
  		break;
  	}
  	case TAP_EVENT_RELEASE:
 -		tp->tap.state = TAP_STATE_1FGTAP_TAPPED;
++		tp->tap.state = TAP_STATE_DOUBLE_TAP;
  		tp_tap_notify(tp,
  			      tp->tap.saved_release_time,
  			      nfingers_tapped,
-@@ -758,8 +816,11 @@
- 			      tp->tap.saved_press_time,
- 			      1,
- 			      LIBINPUT_BUTTON_STATE_PRESSED);
--		tp->tap.saved_release_time = time;
+ 			      LIBINPUT_BUTTON_STATE_RELEASED);
+-		tp_tap_notify(tp,
+-			      tp->tap.saved_press_time,
+-			      1,
+-			      LIBINPUT_BUTTON_STATE_PRESSED);
+ 		tp->tap.saved_release_time = time;
 -		tp_tap_set_timer(tp, time);
-+		tp_tap_notify(tp,
-+			      time,
-+			      nfingers_tapped,
-+			      LIBINPUT_BUTTON_STATE_RELEASED);
-+		tp->tap.state = TAP_STATE_IDLE;
++		tp_double_tap_set_timer(tp, time);
  		break;
  	case TAP_EVENT_MOTION:
  	case TAP_EVENT_TIMEOUT: {
-@@ -1143,6 +1204,9 @@
+@@ -1143,6 +1234,12 @@
  	case TAP_STATE_DEAD:
  		tp_tap_dead_handle_event(tp, t, event, time);
  		break;
 +	case TAP_STATE_HOLDING:
 +		tp_tap_holding_handle_event(tp, t, event, time);
 +		break;
++	case TAP_STATE_DOUBLE_TAP:
++		tp_tap_double_tapped_handle_event(tp, t, event, time);
++		break;
  	}
  
  	if (tp->tap.state == TAP_STATE_IDLE || tp->tap.state == TAP_STATE_DEAD)
-@@ -1294,6 +1358,8 @@
+@@ -1294,6 +1391,8 @@
  	 */
  	switch (tp->tap.state) {
  	case TAP_STATE_TOUCH:
@@ -3758,7 +3809,7 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  	case TAP_STATE_1FGTAP_TAPPED:
  	case TAP_STATE_2FGTAP_TAPPED:
  	case TAP_STATE_3FGTAP_TAPPED:
-@@ -1419,23 +1485,7 @@
+@@ -1419,23 +1518,7 @@
  static enum libinput_config_tap_state
  tp_tap_default(struct evdev_device *evdev)
  {
@@ -3783,7 +3834,7 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  }
  
  static enum libinput_config_tap_state
-@@ -1661,3 +1711,63 @@
+@@ -1661,3 +1744,63 @@
  		return false;
  	}
  }
@@ -4314,13 +4365,14 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
 +	return (tp->tool_touches >> shift) & 0x1;
 +}
 diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
---- old/src/evdev-mt-touchpad.h	2021-01-01 00:00:00.000000000 +0000
-+++ new/src/evdev-mt-touchpad.h	2021-01-01 00:00:00.000000000 +0000
-@@ -132,6 +132,7 @@ enum tp_tap_state {
+--- old/src/evdev-mt-touchpad.h	2024-12-02 20:21:23.955773693 +0800
++++ new/src/evdev-mt-touchpad.h	2024-12-06 14:53:31.954666976 +0800
+@@ -132,6 +132,8 @@
  	TAP_STATE_2FGTAP_DRAGGING_2,
  	TAP_STATE_3FGTAP_DRAGGING_2,
  	TAP_STATE_DEAD, /**< finger count exceeded */
 +	TAP_STATE_HOLDING,
++	TAP_STATE_DOUBLE_TAP,
  };
  
  enum tp_tap_touch_state {
