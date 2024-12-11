@@ -3569,7 +3569,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  void
 diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
 --- old/src/evdev-mt-touchpad-tap.c	2024-12-02 20:21:23.947773357 +0800
-+++ new/src/evdev-mt-touchpad-tap.c	2024-12-06 15:44:32.011692390 +0800
++++ new/src/evdev-mt-touchpad-tap.c	2024-12-11 14:41:30.379684163 +0800
 @@ -30,6 +30,7 @@
  #include "evdev-mt-touchpad.h"
  
@@ -3785,6 +3785,15 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  	}
  
  	if (tp->tap.state == TAP_STATE_IDLE || tp->tap.state == TAP_STATE_DEAD)
+@@ -1186,7 +1283,7 @@
+ 	if (tp->semi_mt && tp->nfingers_down != tp->old_nfingers_down)
+ 		return false;
+ 
+-	return length_in_mm(mm) > DEFAULT_TAP_MOVE_THRESHOLD;
++	return mm.x > DEFAULT_TAP_MOVE_THRESHOLD || mm.y > DEFAULT_TAP_MOVE_THRESHOLD;
+ }
+ 
+ static bool
 @@ -1294,6 +1391,8 @@
  	 */
  	switch (tp->tap.state) {
