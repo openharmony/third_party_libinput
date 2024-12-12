@@ -3568,8 +3568,8 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  void
 diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
---- old/src/evdev-mt-touchpad-tap.c	2024-12-02 20:21:23.947773357 +0800
-+++ new/src/evdev-mt-touchpad-tap.c	2024-12-11 14:41:30.379684163 +0800
+--- old/src/evdev-mt-touchpad-tap.c	2024-12-12 17:14:57.717649127 +0800
++++ new/src/evdev-mt-touchpad-tap.c	2024-12-12 17:40:31.974215392 +0800
 @@ -30,6 +30,7 @@
  #include "evdev-mt-touchpad.h"
  
@@ -3828,6 +3828,15 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  }
  
  static enum libinput_config_tap_state
+@@ -1499,7 +1582,7 @@
+ static inline enum libinput_config_drag_state
+ tp_drag_default(struct evdev_device *device)
+ {
+-	return LIBINPUT_CONFIG_DRAG_ENABLED;
++	return LIBINPUT_CONFIG_DRAG_DISABLED;
+ }
+ 
+ static enum libinput_config_drag_state
 @@ -1661,3 +1744,63 @@
  		return false;
  	}
