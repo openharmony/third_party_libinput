@@ -2461,7 +2461,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  enum gesture_event {
  	GESTURE_EVENT_RESET,
-@@ -90,7 +98,7 @@
+@@ -90,7 +98,7 @@ gesture_event_to_str(enum gesture_event event)
  }
  
  static struct device_float_coords
@@ -2470,7 +2470,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  {
  	struct tp_touch *t;
  	unsigned int i, nactive = 0;
-@@ -99,9 +107,12 @@
+@@ -99,9 +107,12 @@ tp_get_touches_delta(struct tp_dispatch *tp, bool average)
  	for (i = 0; i < tp->num_slots; i++) {
  		t = &tp->touches[i];
  
@@ -2484,10 +2484,11 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  		nactive++;
  
  		if (t->dirty) {
-@@ -124,6 +135,37 @@
+@@ -123,6 +134,37 @@ tp_get_touches_delta(struct tp_dispatch *tp, bool average)
+ 	return delta;
  }
  
- static void
++static void
 +tp_get_raw_touches(struct tp_dispatch *tp, struct sloted_coords_info *raw_touches, uint64_t time)
 +{
 +	struct tp_touch *t;
@@ -2518,11 +2519,10 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
 +	}
 +}
 +
-+static void
+ static void
  tp_gesture_init_scroll(struct tp_dispatch *tp)
  {
- 	struct phys_coords zero = {0.0, 0.0};
-@@ -133,18 +175,21 @@
+@@ -133,18 +175,21 @@ tp_gesture_init_scroll(struct tp_dispatch *tp)
  	tp->scroll.duration.v = 0;
  	tp->scroll.vector = zero;
  	tp->scroll.time_prev = 0;
@@ -2548,7 +2548,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  }
  
  static void
-@@ -169,18 +214,29 @@
+@@ -169,18 +214,29 @@ tp_gesture_start(struct tp_dispatch *tp, uint64_t time)
  		break;
  	case GESTURE_STATE_SCROLL:
  		tp_gesture_init_scroll(tp);
@@ -2583,7 +2583,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  		break;
  	case GESTURE_STATE_POINTER_MOTION:
  		break;
-@@ -190,15 +246,15 @@
+@@ -190,15 +246,15 @@ tp_gesture_start(struct tp_dispatch *tp, uint64_t time)
  }
  
  static struct device_float_coords
@@ -2603,7 +2603,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  	return raw;
  }
-@@ -216,24 +272,195 @@
+@@ -216,24 +272,195 @@ tp_has_pending_pointer_motion(struct tp_dispatch *tp, uint64_t time)
  	 * it twice (here and in tp_gesture_post_pointer_motion) with the same
  	 * event.
  	 */
@@ -2802,7 +2802,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  				      time,
  				      &delta,
  				      &unaccel);
-@@ -243,7 +470,7 @@
+@@ -243,7 +470,7 @@ tp_gesture_post_pointer_motion(struct tp_dispatch *tp, uint64_t time)
  static unsigned int
  tp_gesture_get_active_touches(const struct tp_dispatch *tp,
  			      struct tp_touch **touches,
@@ -2811,7 +2811,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  {
  	unsigned int n = 0;
  	struct tp_touch *t;
-@@ -251,7 +478,7 @@
+@@ -251,7 +478,7 @@ tp_gesture_get_active_touches(const struct tp_dispatch *tp,
  	memset(touches, 0, count * sizeof(struct tp_touch *));
  
  	tp_for_each_touch(tp, t) {
@@ -2820,7 +2820,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  			touches[n++] = t;
  			if (n == count)
  				return count;
-@@ -873,6 +1100,7 @@
+@@ -873,6 +1100,7 @@ tp_gesture_detect_motion_gestures(struct tp_dispatch *tp, uint64_t time)
  	double thumb_mm, finger_mm;
  	double min_move = 1.5; /* min movement threshold in mm - count this touch */
  	double max_move = 4.0; /* max movement threshold in mm - ignore other touch */
@@ -2828,7 +2828,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	bool is_hold_and_motion;
  
  	first_moved = tp_gesture_mm_moved(tp, first);
-@@ -941,12 +1169,10 @@
+@@ -941,12 +1169,10 @@ tp_gesture_detect_motion_gestures(struct tp_dispatch *tp, uint64_t time)
  	if ((!tp->gesture.enabled ||
  	     (distance_mm.x < 40.0 && distance_mm.y < 7.0)) &&
  	    time > (tp->gesture.initial_time + DEFAULT_GESTURE_SWIPE_TIMEOUT)) {
@@ -2844,7 +2844,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	}
  
  	/* If one touch exceeds the max_move threshold while the other has not
-@@ -961,6 +1187,11 @@
+@@ -961,6 +1187,11 @@ tp_gesture_detect_motion_gestures(struct tp_dispatch *tp, uint64_t time)
  		 * more thumb motion on >2 finger gestures during detection.
  		 */
  		if (tp->thumb.detect_thumbs && thumb_mm < min_move) {
@@ -2856,7 +2856,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  			tp_thumb_suppress(tp, thumb);
  			tp_gesture_cancel(tp, time);
  			return;
-@@ -971,11 +1202,24 @@
+@@ -971,11 +1202,24 @@ tp_gesture_detect_motion_gestures(struct tp_dispatch *tp, uint64_t time)
  		 * This applies only to 2-finger gestures.
  		 */
  		if ((!tp->gesture.enabled || finger_mm < min_move) &&
@@ -2883,7 +2883,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  		/* If more than 2 fingers are involved, and the thumb moves
  		 * while the fingers stay still, assume a pinch if eligible.
  		 */
-@@ -1016,7 +1260,27 @@
+@@ -1016,7 +1260,27 @@ tp_gesture_detect_motion_gestures(struct tp_dispatch *tp, uint64_t time)
  			return;
  		}
  	}
@@ -2912,7 +2912,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	/* If the touches are moving away from each other, this is a pinch */
  	tp_gesture_handle_event(tp, GESTURE_EVENT_PINCH, time);
  }
-@@ -1056,7 +1320,7 @@
+@@ -1056,7 +1320,7 @@ tp_gesture_handle_state_none(struct tp_dispatch *tp, uint64_t time)
  	unsigned int ntouches;
  	unsigned int i;
  
@@ -2921,7 +2921,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  	first = touches[0];
  	second = touches[1];
-@@ -1119,6 +1383,10 @@
+@@ -1119,6 +1383,10 @@ tp_gesture_handle_state_none(struct tp_dispatch *tp, uint64_t time)
  	tp->gesture.touches[0] = first;
  	tp->gesture.touches[1] = second;
  
@@ -2932,7 +2932,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	tp_gesture_handle_event(tp, GESTURE_EVENT_FINGER_DETECTED, time);
  }
  
-@@ -1143,6 +1411,9 @@
+@@ -1143,6 +1411,9 @@ tp_gesture_handle_state_hold(struct tp_dispatch *tp, uint64_t time,
  static void
  tp_gesture_handle_state_hold_and_pointer_motion(struct tp_dispatch *tp, uint64_t time)
  {
@@ -2942,7 +2942,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	if (tp->queued & TOUCHPAD_EVENT_MOTION)
  		tp_gesture_post_pointer_motion(tp, time);
  
-@@ -1152,10 +1423,191 @@
+@@ -1152,10 +1423,191 @@ tp_gesture_handle_state_hold_and_pointer_motion(struct tp_dispatch *tp, uint64_t
  static void
  tp_gesture_handle_state_pointer_motion(struct tp_dispatch *tp, uint64_t time)
  {
@@ -3135,7 +3135,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  static void
  tp_gesture_handle_state_scroll(struct tp_dispatch *tp, uint64_t time)
  {
-@@ -1165,17 +1617,15 @@
+@@ -1165,17 +1617,19 @@ tp_gesture_handle_state_scroll(struct tp_dispatch *tp, uint64_t time)
  	if (tp->scroll.method != LIBINPUT_CONFIG_SCROLL_2FG)
  		return;
  
@@ -3153,6 +3153,10 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
 +		if (tp->nactive_slots == 2) {
 +			raw = tp_edge_aft_for_scroll(tp, time, raw);
 +		}
++		if (tp->axis_speed_gain.use_gain) {
++			raw.x = tp->axis_speed_gain.gain * raw.x;
++			raw.y = tp->axis_speed_gain.gain * raw.y;
++		}
  	}
  
 -	raw = tp_get_average_touches_delta(tp);
@@ -3160,7 +3164,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	/* scroll is not accelerated by default */
  	delta = tp_filter_scroll(tp, &raw, time);
  
-@@ -1184,20 +1634,180 @@
+@@ -1184,20 +1638,180 @@ tp_gesture_handle_state_scroll(struct tp_dispatch *tp, uint64_t time)
  
  	tp_gesture_start(tp, time);
  	tp_gesture_apply_scroll_constraints(tp, &raw, &delta, time);
@@ -3342,7 +3346,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  	if (!normalized_is_zero(delta) || !device_float_is_zero(raw)) {
  		unaccel = tp_filter_motion_unaccelerated(tp, &raw, time);
-@@ -1205,7 +1815,7 @@
+@@ -1205,7 +1819,7 @@ tp_gesture_handle_state_swipe(struct tp_dispatch *tp, uint64_t time)
  		gesture_notify_swipe(&tp->device->base, time,
  				     LIBINPUT_EVENT_GESTURE_SWIPE_UPDATE,
  				     tp->gesture.finger_count,
@@ -3351,7 +3355,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	}
  }
  
-@@ -1269,14 +1879,14 @@
+@@ -1269,14 +1883,14 @@ tp_gesture_post_gesture(struct tp_dispatch *tp, uint64_t time,
  		tp_gesture_handle_state_scroll(tp, time);
  
  	if (tp->gesture.state == GESTURE_STATE_SWIPE)
@@ -3368,7 +3372,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  {
  	struct tp_touch *thumb;
  	struct phys_coords thumb_moved;
-@@ -1286,7 +1896,7 @@
+@@ -1286,7 +1900,7 @@ tp_gesture_thumb_moved(struct tp_dispatch *tp)
  	if (!thumb)
  		return false;
  
@@ -3377,7 +3381,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  		return false;
  
  	thumb_moved = tp_gesture_mm_moved(tp, thumb);
-@@ -1305,9 +1915,10 @@
+@@ -1305,9 +1919,10 @@ tp_gesture_post_events(struct tp_dispatch *tp, uint64_t time,
  	 * physical button is down, don't allow gestures unless the button
  	 * is held down by a *thumb*, specifically.
  	 */
@@ -3390,7 +3394,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  		if (tp->gesture.state != GESTURE_STATE_POINTER_MOTION) {
  			tp_gesture_cancel(tp, time);
  			tp_gesture_handle_event(tp,
-@@ -1326,9 +1937,13 @@
+@@ -1326,9 +1941,13 @@ tp_gesture_post_events(struct tp_dispatch *tp, uint64_t time,
  	 * so we may suppress it too early. Give it some time to move.
  	 */
  	if (time < (tp->gesture.initial_time + DEFAULT_GESTURE_PINCH_TIMEOUT) &&
@@ -3405,10 +3409,11 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	if (tp->gesture.finger_count <= 4)
  		tp_gesture_post_gesture(tp, time, ignore_motion);
  }
-@@ -1345,10 +1960,51 @@
+@@ -1344,11 +1963,52 @@ tp_gesture_stop_twofinger_scroll(struct tp_dispatch *tp, uint64_t time)
+ 			  LIBINPUT_POINTER_AXIS_SOURCE_FINGER);
  }
  
- static void
++static void
 +tp_init_scroll_lock(struct tp_dispatch *tp)
 +{
 +	tp->scroll_idle_lock[0].state = SCROLL_LOCK_STATE_UNLOCKED;
@@ -3447,7 +3452,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
 +	tp->pointer_motion_lock.last_moved.y = 0.0;
 +}
 +
-+static void
+ static void
  tp_gesture_end(struct tp_dispatch *tp, uint64_t time, bool cancelled)
  {
  	enum tp_gesture_state state = tp->gesture.state;
@@ -3458,7 +3463,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	if (!tp->gesture.started) {
  		tp_gesture_handle_event(tp, GESTURE_EVENT_RESET, time);
  		return;
-@@ -1368,6 +2024,7 @@
+@@ -1368,6 +2028,7 @@ tp_gesture_end(struct tp_dispatch *tp, uint64_t time, bool cancelled)
  		break;
  	case GESTURE_STATE_SCROLL:
  		tp_gesture_stop_twofinger_scroll(tp, time);
@@ -3466,7 +3471,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  		break;
  	case GESTURE_STATE_PINCH:
  		gesture_notify_pinch_end(&tp->device->base, time,
-@@ -1425,11 +2082,35 @@
+@@ -1425,11 +2086,35 @@ void
  tp_gesture_handle_state(struct tp_dispatch *tp, uint64_t time)
  {
  	unsigned int active_touches = 0;
@@ -3503,7 +3508,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	}
  
  	if (active_touches != tp->gesture.finger_count) {
-@@ -1438,6 +2119,10 @@
+@@ -1438,6 +2123,10 @@ tp_gesture_handle_state(struct tp_dispatch *tp, uint64_t time)
  			tp_gesture_stop(tp, time);
  			tp->gesture.finger_count = 0;
  			tp->gesture.finger_count_pending = 0;
@@ -3514,7 +3519,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  		/* Immediately switch to new mode to avoid initial latency */
  		} else if (!tp->gesture.started) {
  			tp->gesture.finger_count = active_touches;
-@@ -1504,6 +2189,41 @@
+@@ -1504,6 +2193,41 @@ tp_gesture_get_hold_default(struct libinput_device *device)
  	       LIBINPUT_CONFIG_HOLD_DISABLED;
  }
  
@@ -3556,7 +3561,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  void
  tp_init_gesture(struct tp_dispatch *tp)
  {
-@@ -1539,6 +2259,10 @@
+@@ -1539,6 +2263,10 @@ tp_init_gesture(struct tp_dispatch *tp)
  			    tp_libinput_context(tp),
  			    timer_name,
  			    tp_gesture_hold_timeout, tp);
@@ -3957,10 +3962,11 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  #define DEFAULT_KEYBOARD_ACTIVITY_TIMEOUT_2 ms2us(500)
  #define FAKE_FINGER_OVERFLOW bit(7)
  #define THUMB_IGNORE_SPEED_THRESHOLD 20 /* mm/s */
-@@ -330,6 +330,35 @@
+@@ -329,6 +329,35 @@ tp_fake_finger_set(struct tp_dispatch *tp,
+ 	}
  }
  
- static inline void
++static inline void
 +tp_tool_key_set(struct tp_dispatch *tp,
 +		   unsigned int code,
 +		   bool is_press)
@@ -3989,11 +3995,10 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
 +	}
 +}
 +
-+static inline void
+ static inline void
  tp_new_touch(struct tp_dispatch *tp, struct tp_touch *t, uint64_t time)
  {
- 	if (t->state == TOUCH_BEGIN ||
-@@ -346,6 +375,8 @@
+@@ -346,6 +375,8 @@ tp_new_touch(struct tp_dispatch *tp, struct tp_touch *t, uint64_t time)
  		tp->nfingers_down++;
  		t->state = TOUCH_UPDATE;
  		t->has_ended = false;
@@ -4002,7 +4007,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		return;
  	}
  
-@@ -362,7 +393,9 @@
+@@ -362,7 +393,9 @@ tp_new_touch(struct tp_dispatch *tp, struct tp_touch *t, uint64_t time)
  	t->speed.last_speed = 0;
  	t->speed.exceeded_count = 0;
  	t->hysteresis.x_motion_history = 0;
@@ -4012,7 +4017,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  }
  
  static inline void
-@@ -371,6 +404,7 @@
+@@ -371,6 +404,7 @@ tp_begin_touch(struct tp_dispatch *tp, struct tp_touch *t, uint64_t time)
  	t->dirty = true;
  	t->state = TOUCH_BEGIN;
  	t->initial_time = time;
@@ -4020,7 +4025,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	t->was_down = true;
  	tp->nfingers_down++;
  	t->palm.time = time;
-@@ -448,6 +482,14 @@
+@@ -448,6 +482,14 @@ tp_end_touch(struct tp_dispatch *tp, struct tp_touch *t, uint64_t time)
  		return;
  	}
  
@@ -4035,7 +4040,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	t->dirty = true;
  	t->palm.state = PALM_NONE;
  	t->state = TOUCH_END;
-@@ -515,6 +557,88 @@
+@@ -515,6 +557,88 @@ rotated(struct tp_dispatch *tp, unsigned int code, int value)
  	return absinfo->maximum - (value - absinfo->minimum);
  }
  
@@ -4124,7 +4129,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  static void
  tp_process_absolute(struct tp_dispatch *tp,
  		    const struct input_event *e,
-@@ -524,6 +648,7 @@
+@@ -524,6 +648,7 @@ tp_process_absolute(struct tp_dispatch *tp,
  
  	switch(e->code) {
  	case ABS_MT_POSITION_X:
@@ -4132,7 +4137,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		evdev_device_check_abs_axis_range(tp->device,
  						  e->code,
  						  e->value);
-@@ -532,6 +657,7 @@
+@@ -532,6 +657,7 @@ tp_process_absolute(struct tp_dispatch *tp,
  		tp->queued |= TOUCHPAD_EVENT_MOTION;
  		break;
  	case ABS_MT_POSITION_Y:
@@ -4140,7 +4145,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		evdev_device_check_abs_axis_range(tp->device,
  						  e->code,
  						  e->value);
-@@ -540,14 +666,17 @@
+@@ -540,14 +666,17 @@ tp_process_absolute(struct tp_dispatch *tp,
  		tp->queued |= TOUCHPAD_EVENT_MOTION;
  		break;
  	case ABS_MT_SLOT:
@@ -4158,7 +4163,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  			tp->nactive_slots -= 1;
  			tp_end_sequence(tp, t, time);
  		}
-@@ -559,6 +688,7 @@
+@@ -559,6 +688,7 @@ tp_process_absolute(struct tp_dispatch *tp,
  		break;
  	case ABS_MT_TOOL_TYPE:
  		t->is_tool_palm = e->value == MT_TOOL_PALM;
@@ -4166,7 +4171,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		t->dirty = true;
  		tp->queued |= TOUCHPAD_EVENT_OTHERAXIS;
  		break;
-@@ -572,6 +702,26 @@
+@@ -572,6 +702,26 @@ tp_process_absolute(struct tp_dispatch *tp,
  		t->dirty = true;
  		tp->queued |= TOUCHPAD_EVENT_OTHERAXIS;
  		break;
@@ -4193,7 +4198,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	}
  }
  
-@@ -776,6 +926,7 @@
+@@ -776,6 +926,7 @@ tp_process_key(struct tp_dispatch *tp,
  		case BTN_TOOL_QUADTAP:
  		case BTN_TOOL_QUINTTAP:
  			tp_fake_finger_set(tp, e->code, !!e->value);
@@ -4201,7 +4206,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  			break;
  		case BTN_0:
  		case BTN_1:
-@@ -783,6 +934,20 @@
+@@ -783,6 +934,20 @@ tp_process_key(struct tp_dispatch *tp,
  			tp_process_trackpoint_button(tp, e, time);
  			break;
  	}
@@ -4222,7 +4227,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  }
  
  static void
-@@ -812,7 +977,8 @@
+@@ -812,7 +977,8 @@ tp_unpin_finger(const struct tp_dispatch *tp, struct tp_touch *t)
  	mm = evdev_device_unit_delta_to_mm(tp->device, &delta);
  
  	/* 1.5mm movement -> unpin */
@@ -4232,7 +4237,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		t->pinned.is_pinned = false;
  		return;
  	}
-@@ -841,16 +1007,101 @@
+@@ -841,16 +1007,101 @@ tp_touch_active(const struct tp_dispatch *tp, const struct tp_touch *t)
  }
  
  bool
@@ -4337,7 +4342,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  static inline bool
  tp_palm_was_in_side_edge(const struct tp_dispatch *tp, const struct tp_touch *t)
  {
-@@ -1862,7 +2113,8 @@
+@@ -1862,7 +2113,8 @@ tp_post_events(struct tp_dispatch *tp, uint64_t time)
  	ignore_motion |= tp_tap_handle_state(tp, time);
  	ignore_motion |= tp_post_button_events(tp, time);
  
@@ -4347,7 +4352,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		tp_edge_scroll_stop_events(tp, time);
  		tp_gesture_cancel(tp, time);
  		return;
-@@ -1908,6 +2160,7 @@
+@@ -1908,6 +2160,7 @@ tp_handle_state(struct tp_dispatch *tp,
  	tp_post_events(tp, time);
  	tp_post_process_state(tp, time);
  
@@ -4355,7 +4360,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	tp_clickpad_middlebutton_apply_config(tp->device);
  	tp_apply_rotation(tp->device);
  }
-@@ -1958,6 +2211,7 @@
+@@ -1958,6 +2211,7 @@ tp_interface_process(struct evdev_dispatch *dispatch,
  		tp_process_msc(tp, e, time);
  		break;
  	case EV_SYN:
@@ -4363,7 +4368,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		tp_handle_state(tp, time);
  #if 0
  		tp_debug_touch_state(tp, device);
-@@ -2318,6 +2572,10 @@
+@@ -2318,6 +2572,10 @@ tp_keyboard_event(uint64_t time, struct libinput_event *event, void *data)
  	if (tp_key_ignore_for_dwt(key))
  		return;
  
@@ -4374,7 +4379,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	/* modifier keys don't trigger disable-while-typing so things like
  	 * ctrl+zoom or ctrl+click are possible */
  	is_modifier = tp_key_is_modifier(key);
-@@ -2344,6 +2602,9 @@
+@@ -2344,6 +2602,9 @@ tp_keyboard_event(uint64_t time, struct libinput_event *event, void *data)
  	}
  
  	tp->dwt.keyboard_last_press_time = time;
@@ -4384,7 +4389,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	long_set_bit(tp->dwt.key_mask, key);
  	libinput_timer_set(&tp->dwt.keyboard_timer,
  			   time + timeout);
-@@ -2860,6 +3121,9 @@
+@@ -2860,6 +3121,9 @@ tp_init_touch(struct tp_dispatch *tp,
  	t->tp = tp;
  	t->has_ended = true;
  	t->index = index;
@@ -4394,7 +4399,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  }
  
  static inline void
-@@ -3355,6 +3619,10 @@
+@@ -3355,6 +3619,10 @@ tp_init_palmdetect_edge(struct tp_dispatch *tp,
  	if (evdev_device_has_model_quirk(device, QUIRK_MODEL_APPLE_TOUCHPAD))
  		return;
  
@@ -4405,7 +4410,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	evdev_device_get_size(device, &width, &height);
  
  	/* Enable edge palm detection on touchpads >= 70 mm. Anything
-@@ -3362,18 +3630,18 @@
+@@ -3362,18 +3630,18 @@ tp_init_palmdetect_edge(struct tp_dispatch *tp,
  	if (width < 70.0)
  		return;
  
@@ -4429,7 +4434,42 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		edges = evdev_device_mm_to_units(device, &mm);
  		tp->palm.upper_edge = edges.y;
  	}
-@@ -3788,6 +4056,10 @@
+@@ -3487,6 +3755,26 @@ tp_init_palmdetect(struct tp_dispatch *tp,
+ 	tp_init_palmdetect_size(tp, device);
+ }
+ 
++static void
++tp_init_axis_speed_gain(struct tp_dispatch *tp,
++			struct evdev_device *device)
++{
++	struct quirks_context *quirks;
++	struct quirks *q;
++	double threshold;
++
++	quirks = evdev_libinput_context(device)->quirks;
++	q = quirks_fetch_for_device(quirks, device->udev_device);
++	if (!q)
++		return;
++
++	if (quirks_get_double(q, QUIRK_ATTR_TOUCHPAD_AXIS_SPEED_GAIN, &threshold)) {
++		tp->axis_speed_gain.use_gain = true;
++		tp->axis_speed_gain.gain = threshold;
++	}
++	quirks_unref(q);
++}
++
+ static void
+ tp_init_sendevents(struct tp_dispatch *tp,
+ 		   struct evdev_device *device)
+@@ -3775,6 +4063,7 @@ tp_init(struct tp_dispatch *tp,
+ 	tp_init_scroll(tp, device);
+ 	tp_init_gesture(tp);
+ 	tp_init_thumb(tp);
++	tp_init_axis_speed_gain(tp, device);
+ 
+ 	/* Lenovo X1 Gen6 buffers the events in a weird way, making jump
+ 	 * detection impossible. See
+@@ -3788,6 +4077,10 @@ tp_init(struct tp_dispatch *tp,
  	if (tp->gesture.enabled)
  		device->seat_caps |= EVDEV_DEVICE_GESTURE;
  
@@ -4440,7 +4480,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	return true;
  }
  
-@@ -3971,6 +4243,14 @@
+@@ -3971,6 +4264,14 @@ evdev_mt_touchpad_create(struct evdev_device *device)
  
  	tp = zalloc(sizeof *tp);
  
@@ -4455,7 +4495,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	if (!tp_init(tp, device)) {
  		tp_interface_destroy(&tp->base);
  		return NULL;
-@@ -3988,3 +4268,27 @@
+@@ -3988,3 +4289,27 @@ evdev_mt_touchpad_create(struct evdev_device *device)
  
  	return &tp->base;
  }
@@ -4486,7 +4526,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
 diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
 --- old/src/evdev-mt-touchpad.h	2024-12-02 20:21:23.955773693 +0800
 +++ new/src/evdev-mt-touchpad.h	2024-12-06 14:53:31.954666976 +0800
-@@ -132,6 +132,8 @@
+@@ -132,6 +132,8 @@ enum tp_tap_state {
  	TAP_STATE_2FGTAP_DRAGGING_2,
  	TAP_STATE_3FGTAP_DRAGGING_2,
  	TAP_STATE_DEAD, /**< finger count exceeded */
@@ -4495,7 +4535,7 @@ diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
  };
  
  enum tp_tap_touch_state {
-@@ -192,10 +194,15 @@
+@@ -192,10 +194,15 @@ struct tp_touch {
  	int pressure;
  	bool is_tool_palm; /* MT_TOOL_PALM */
  	int major, minor;
@@ -4511,7 +4551,7 @@ diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
  	struct {
  		/* A quirk mostly used on Synaptics touchpads. In a
  		   transition to/from fake touches > num_slots, the current
-@@ -282,6 +289,18 @@
+@@ -282,6 +289,18 @@ enum suspend_trigger {
  	SUSPEND_TABLET_MODE     = 0x8,
  };
  
@@ -4530,7 +4570,7 @@ diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
  struct tp_dispatch {
  	struct evdev_dispatch base;
  	struct evdev_device *device;
-@@ -310,6 +329,17 @@
+@@ -310,6 +329,17 @@ struct tp_dispatch {
  	 */
  	unsigned int fake_touches;
  
@@ -4548,7 +4588,7 @@ diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
  	struct {
  		bool detection_disabled;
  		struct ratelimit warning;
-@@ -363,9 +393,23 @@
+@@ -363,8 +393,22 @@ struct tp_dispatch {
  		struct device_float_coords center;
  		struct libinput_timer hold_timer;
  		bool hold_enabled;
@@ -4557,7 +4597,7 @@ diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
 +		unsigned int moved_count;
  	} gesture;
  
- 	struct {
++	struct {
 +		int32_t right_edge;		/* in device coordinates */
 +		int32_t left_edge;		/* in device coordinates */
 +		int32_t upper_edge;		/* in device coordinates */
@@ -4568,11 +4608,10 @@ diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
 +		uint64_t prev_time;		/* previous event time in us */
 +	} press_and_drag;
 +
-+	struct {
+ 	struct {
  		bool is_clickpad;		/* true for clickpads */
  		bool has_topbuttons;
- 		bool use_clickfinger;		/* number of fingers decides button number */
-@@ -399,6 +443,7 @@
+@@ -399,6 +443,7 @@ struct tp_dispatch {
  
  		enum libinput_config_click_method click_method;
  		struct libinput_device_config_click_method config_method;
@@ -4580,7 +4619,7 @@ diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
  	} buttons;
  
  	struct {
-@@ -414,6 +459,8 @@
+@@ -414,6 +459,8 @@ struct tp_dispatch {
  		struct {
  			uint64_t h, v;
  		} duration;
@@ -4589,7 +4628,7 @@ diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
  	} scroll;
  
  	enum touchpad_event queued;
-@@ -482,6 +529,8 @@
+@@ -482,6 +529,8 @@ struct tp_dispatch {
  		bool keyboard_active;
  		struct libinput_timer keyboard_timer;
  		uint64_t keyboard_last_press_time;
@@ -4598,7 +4637,7 @@ diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
  	} dwt;
  
  	struct {
-@@ -535,6 +584,40 @@
+@@ -535,6 +584,45 @@ struct tp_dispatch {
  		struct evdev_device *tablet_device;
  		bool tablet_left_handed_state;
  	} left_handed;
@@ -4636,10 +4675,15 @@ diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
 +		struct device_coords last; /* last coords for a tool palm touch */
 +		uint64_t last_time; /* timestamp when a tool palm touch up */
 +	} history_tool_palm[5];
++
++	struct {
++		bool use_gain;
++		double gain;
++	} axis_speed_gain;
  };
  
  static inline struct tp_dispatch*
-@@ -617,7 +700,11 @@
+@@ -617,7 +705,11 @@ tp_touch_active(const struct tp_dispatch *tp, const struct tp_touch *t);
  
  bool
  tp_touch_active_for_gesture(const struct tp_dispatch *tp,
@@ -4652,7 +4696,7 @@ diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
  
  int
  tp_tap_handle_state(struct tp_dispatch *tp, uint64_t time);
-@@ -767,4 +854,22 @@
+@@ -767,4 +859,22 @@ tp_init_thumb(struct tp_dispatch *tp);
  struct tp_touch*
  tp_thumb_get_touch(struct tp_dispatch *tp);
  
@@ -8853,7 +8897,7 @@ diff -Naur old/src/path-seat.c new/src/path-seat.c
 diff -Naur old/src/quirks.c new/src/quirks.c
 --- old/src/quirks.c	2021-01-01 00:00:00.000000000 +0000
 +++ new/src/quirks.c	2021-01-01 00:00:00.000000000 +0000
-@@ -271,6 +271,7 @@
+@@ -271,6 +271,7 @@ quirk_get_name(enum quirk q)
  	case QUIRK_MODEL_TRACKBALL:			return "ModelTrackball";
  	case QUIRK_MODEL_WACOM_TOUCHPAD:		return "ModelWacomTouchpad";
  	case QUIRK_MODEL_PRESSURE_PAD:			return "ModelPressurePad";
@@ -8861,19 +8905,20 @@ diff -Naur old/src/quirks.c new/src/quirks.c
  
  	case QUIRK_ATTR_SIZE_HINT:			return "AttrSizeHint";
  	case QUIRK_ATTR_TOUCH_SIZE_RANGE:		return "AttrTouchSizeRange";
-@@ -290,6 +291,8 @@
+@@ -290,6 +291,8 @@ quirk_get_name(enum quirk q)
  	case QUIRK_ATTR_MSC_TIMESTAMP:			return "AttrMscTimestamp";
  	case QUIRK_ATTR_EVENT_CODE:			return "AttrEventCode";
  	case QUIRK_ATTR_INPUT_PROP:			return "AttrInputProp";
 +	case QUIRK_ATTR_DWT_POINTER_UNLOCK_TIME_THRESHOLD:	return "AttrDwtPointerUnlockTimeThreshold";
-+
++	case QUIRK_ATTR_TOUCHPAD_AXIS_SPEED_GAIN:	return "AttrTouchpadAxisSpeedGain";
  	default:
  		abort();
  	}
-@@ -859,6 +862,13 @@
+@@ -858,6 +861,20 @@ parse_attr(struct quirks_context *ctx,
+ 		p->value.tuples.ntuples = nprops;
  		p->type = PT_TUPLES;
  
- 		rc = true;
++		rc = true;
 +	} else if (streq(key, quirk_get_name(QUIRK_ATTR_DWT_POINTER_UNLOCK_TIME_THRESHOLD))) {
 +		p->id = QUIRK_ATTR_DWT_POINTER_UNLOCK_TIME_THRESHOLD;
 +		if (!safe_atou(value, &v))
@@ -8881,13 +8926,19 @@ diff -Naur old/src/quirks.c new/src/quirks.c
 +		p->type = PT_UINT;
 +		p->value.u = v;
 +		rc = true;
++	} else if (streq(key, quirk_get_name(QUIRK_ATTR_TOUCHPAD_AXIS_SPEED_GAIN))) {
++		p->id = QUIRK_ATTR_TOUCHPAD_AXIS_SPEED_GAIN;
++		if (!safe_atod(value, &d))
++			goto out;
++		p->type = PT_DOUBLE;
++		p->value.d = d;
+ 		rc = true;
  	} else {
  		qlog_error(ctx, "Unknown key %s in %s\n", key, s->name);
- 	}
 diff -Naur old/src/quirks.h new/src/quirks.h
 --- old/src/quirks.h	2021-01-01 00:00:00.000000000 +0000
 +++ new/src/quirks.h	2021-01-01 00:00:00.000000000 +0000
-@@ -88,6 +88,7 @@
+@@ -88,6 +88,7 @@ enum quirk {
  	QUIRK_MODEL_WACOM_TOUCHPAD,
  	QUIRK_MODEL_PRESSURE_PAD,
  	QUIRK_MODEL_TOUCHPAD_PHANTOM_CLICKS,
@@ -8895,11 +8946,12 @@ diff -Naur old/src/quirks.h new/src/quirks.h
  
  	_QUIRK_LAST_MODEL_QUIRK_, /* Guard: do not modify */
  
-@@ -109,6 +110,7 @@
+@@ -109,6 +110,8 @@ enum quirk {
  	QUIRK_ATTR_MSC_TIMESTAMP,
  	QUIRK_ATTR_EVENT_CODE,
  	QUIRK_ATTR_INPUT_PROP,
 +	QUIRK_ATTR_DWT_POINTER_UNLOCK_TIME_THRESHOLD,
++	QUIRK_ATTR_TOUCHPAD_AXIS_SPEED_GAIN,
  
  	_QUIRK_LAST_ATTR_QUIRK_, /* Guard: do not modify */
  };
