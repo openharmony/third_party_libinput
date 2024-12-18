@@ -2444,8 +2444,8 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
 +    }
 +}
 diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestures.c
---- old/src/evdev-mt-touchpad-gestures.c	2024-11-07 07:08:00.239774611 +0000
-+++ new/src/evdev-mt-touchpad-gestures.c	2024-11-11 13:02:18.801592570 +0000
+--- old/src/evdev-mt-touchpad-gestures.c	2024-12-18 16:59:28.176034966 +0800
++++ new/src/evdev-mt-touchpad-gestures.c	2024-12-18 18:06:59.095544458 +0800
 @@ -36,6 +36,14 @@
  
  #define HOLD_AND_MOTION_THRESHOLD 0.5 /* mm */
@@ -2759,7 +2759,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
 +		}
 +	}
 +	uint32_t edgeMask = tp_move_drag_is_at_edge(tp, time);
-+	if (edgeMask && ((tp->buttons.is_clickpad && tp->buttons.state) || tp_tap_dragging(tp))) {
++	if (tp->nactive_slots == 1 && edgeMask && ((tp->buttons.is_clickpad && tp->buttons.state) || tp_tap_dragging(tp))) {
 +		if (tp->press_and_drag.prev_time != 0 && time > tp->press_and_drag.prev_time) {
 +			/* reset raw delta according to entered edge areas */
 +			if ((edgeMask & PRESS_AND_DRAG_LEFT_EDGE_BIT) || (edgeMask & PRESS_AND_DRAG_RIGHT_EDGE_BIT)) {
