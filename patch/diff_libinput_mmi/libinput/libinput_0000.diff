@@ -7787,7 +7787,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_event_gesture_get_base_event(struct libinput_event_gesture *event)
  {
  	require_event_type(libinput_event_get_context(&event->base),
-@@ -4764,3 +5916,230 @@
+@@ -4764,3 +5916,229 @@
  	}
  }
  #endif
@@ -8006,7 +8006,6 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +	tp->orginal.active_slot_count = 0;
 +	tp->orginal.seat_slot_id = 0;
 +	struct tp_touch *t;
-+	evdev_log_libinput_info(tp->device, "ntouches:%d", tp->ntouches);
 +	tp_for_each_touch(tp, t) {
 +		if (t == NULL) {
 +			continue;
