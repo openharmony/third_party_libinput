@@ -757,7 +757,7 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
  /**
   * @ingroup config
   */
-@@ -6398,7 +7015,140 @@
+@@ -6398,7 +7015,143 @@
  unsigned int
  libinput_device_config_rotation_get_default_angle(struct libinput_device *device);
  
@@ -893,6 +893,9 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
 +enum libinput_config_status
 +libinput_config_rightbutton_area(struct libinput *libinput,
 +                const int32_t height_percent, const int32_t width_percent);
++
++void
++libinput_touchpad_event_clear(struct libinput_device *device);
  #ifdef __cplusplus
  }
  #endif
@@ -6493,19 +6496,21 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_event_touch_get_y_transformed(struct libinput_event_touch *event,
  				       uint32_t height)
  {
-@@ -945,7 +1085,7 @@
+@@ -945,7 +1085,36 @@
  }
  
  LIBINPUT_EXPORT double
 -libinput_event_touch_get_y(struct libinput_event_touch *event)
 +libinput_event_touch_get_tool_x(struct libinput_event_touch *event)
- {
- 	struct evdev_device *device = evdev_device(event->base.device);
- 
-@@ -955,9 +1095,358 @@
- 			   LIBINPUT_EVENT_TOUCH_DOWN,
- 			   LIBINPUT_EVENT_TOUCH_MOTION);
- 
++{
++	struct evdev_device *device = evdev_device(event->base.device);
++
++	require_event_type(libinput_event_get_context(&event->base),
++			   event->base.type,
++			   0,
++			   LIBINPUT_EVENT_TOUCH_DOWN,
++			   LIBINPUT_EVENT_TOUCH_MOTION);
++
 +	return evdev_convert_to_mm(device->abs.absinfo_x, event->tool_rect.x);
 +}
 +
@@ -6526,15 +6531,13 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +
 +LIBINPUT_EXPORT double
 +libinput_event_touch_get_tool_y(struct libinput_event_touch *event)
-+{
-+	struct evdev_device *device = evdev_device(event->base.device);
-+
-+	require_event_type(libinput_event_get_context(&event->base),
-+			   event->base.type,
-+			   0,
-+			   LIBINPUT_EVENT_TOUCH_DOWN,
-+			   LIBINPUT_EVENT_TOUCH_MOTION);
-+
+ {
+ 	struct evdev_device *device = evdev_device(event->base.device);
+ 
+@@ -955,9 +1124,329 @@
+ 			   LIBINPUT_EVENT_TOUCH_DOWN,
+ 			   LIBINPUT_EVENT_TOUCH_MOTION);
+ 
 +	return evdev_convert_to_mm(device->abs.absinfo_y, event->tool_rect.y);
 +}
 +
@@ -7784,7 +7787,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_event_gesture_get_base_event(struct libinput_event_gesture *event)
  {
  	require_event_type(libinput_event_get_context(&event->base),
-@@ -4764,3 +5916,202 @@
+@@ -4764,3 +5916,230 @@
  	}
  }
  #endif
@@ -7986,6 +7989,34 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +     */
 +    evdev_set_rightbutton_area(width_percent, height_percent);
 +    return LIBINPUT_CONFIG_STATUS_SUCCESS;
++}
++
++LIBINPUT_EXPORT void
++libinput_touchpad_event_clear(struct libinput_device *device)
++{
++	struct evdev_dispatch *dispatch = evdev_device(device)->dispatch;
++	if (dispatch == NULL) {
++		return;
++	}
++	struct tp_dispatch *tp = tp_dispatch(dispatch);
++	if (tp == NULL) {
++		return;
++	}
++	tp->slot = 0;
++	tp->orginal.active_slot_count = 0;
++	tp->orginal.seat_slot_id = 0;
++	struct tp_touch *t;
++	evdev_log_libinput_info(tp->device, "ntouches:%d", tp->ntouches);
++	tp_for_each_touch(tp, t) {
++		if (t == NULL) {
++			continue;
++		}
++		evdev_log_libinput_info(tp->device, "t->index:%d, t->is_tool_palm:%d, t->tool_type:%d, t->palm.state:%d",
++			t->index, t->is_tool_palm, t->tool_type, t->palm.state);
++		t->is_tool_palm = false;
++		t->tool_type = 0;
++		t->palm.state = PALM_NONE;
++	}
 +}
 diff -Naur old/src/libinput.h new/src/libinput.h
 --- old/src/libinput.h	2021-01-01 00:00:00.000000000 +0000
@@ -8733,7 +8764,7 @@ diff -Naur old/src/libinput.h new/src/libinput.h
  /**
   * @ingroup config
   */
-@@ -6398,6 +7015,138 @@
+@@ -6398,6 +7015,141 @@
  unsigned int
  libinput_device_config_rotation_get_default_angle(struct libinput_device *device);
  
@@ -8869,6 +8900,9 @@ diff -Naur old/src/libinput.h new/src/libinput.h
 +enum libinput_config_status
 +libinput_config_rightbutton_area(struct libinput *libinput,
 +                const int32_t height_percent, const int32_t width_percent);
++
++void
++libinput_touchpad_event_clear(struct libinput_device *device);
  #ifdef __cplusplus
  }
  #endif
