@@ -3572,8 +3572,8 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  void
 diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
---- old/src/evdev-mt-touchpad-tap.c	2024-12-12 17:14:57.717649127 +0800
-+++ new/src/evdev-mt-touchpad-tap.c	2024-12-12 17:40:31.974215392 +0800
+--- old/src/evdev-mt-touchpad-tap.c	2024-12-23 20:25:10.858122530 +0800
++++ new/src/evdev-mt-touchpad-tap.c	2024-12-23 20:42:47.399987968 +0800
 @@ -30,6 +30,7 @@
  #include "evdev-mt-touchpad.h"
  
@@ -3805,7 +3805,7 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  		return false;
  
 -	return length_in_mm(mm) > DEFAULT_TAP_MOVE_THRESHOLD;
-+	return mm.x > DEFAULT_TAP_MOVE_THRESHOLD || mm.y > DEFAULT_TAP_MOVE_THRESHOLD;
++	return fabs(mm.x) > DEFAULT_TAP_MOVE_THRESHOLD || fabs(mm.y) > DEFAULT_TAP_MOVE_THRESHOLD;
  }
  
  static bool
