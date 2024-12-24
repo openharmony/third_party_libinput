@@ -20,6 +20,7 @@
             libinput_event_touch_get_slot*;
             libinput_device_config_tap_set_drag_enabled*;
             libinput_touchpad_event_clear*;
+            libinput_event_touch_get_blob_id*;
         };
     local:
         *;
