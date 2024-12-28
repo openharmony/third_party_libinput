@@ -3530,7 +3530,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	}
  
  	if (active_touches != tp->gesture.finger_count) {
-@@ -1438,6 +2123,10 @@
+@@ -1438,6 +2123,14 @@
  			tp_gesture_stop(tp, time);
  			tp->gesture.finger_count = 0;
  			tp->gesture.finger_count_pending = 0;
@@ -3538,10 +3538,14 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
 +			time - time_start < TIME_GESTURE_WAIT_ALL_FINGER_DOWN) {
 +			tp_gesture_cancel(tp, time);
 +			tp->gesture.finger_count = active_touches;
++		/* Do not change touchpad multi-finger gesture when finger count change(>1) util finger count <=1  */
++		} else if (tp->gesture.started && tp->gesture.finger_count > 2 && active_touches >1 &&
++			(tp->gesture.state == GESTURE_STATE_SWIPE || tp->gesture.state == GESTURE_STATE_PINCH)) {
++			return;
  		/* Immediately switch to new mode to avoid initial latency */
  		} else if (!tp->gesture.started) {
  			tp->gesture.finger_count = active_touches;
-@@ -1504,6 +2193,41 @@
+@@ -1504,6 +2197,41 @@
  	       LIBINPUT_CONFIG_HOLD_DISABLED;
  }
  
