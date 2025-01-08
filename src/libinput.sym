@@ -105,6 +105,7 @@ global:
 	libinput_get_user_data;
 	libinput_log_get_priority;
 	libinput_log_set_handler;
+	libinput_toggle_caps_key;
 	libinput_create_keyboard_event;
 	libinput_log_set_priority;
 	libinput_next_event_type;
