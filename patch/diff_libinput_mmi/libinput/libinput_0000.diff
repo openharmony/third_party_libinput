@@ -2530,8 +2530,8 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
 +    }
 +}
 diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestures.c
---- old/src/evdev-mt-touchpad-gestures.c	2024-12-18 16:59:28.176034966 +0800
-+++ new/src/evdev-mt-touchpad-gestures.c	2024-12-18 18:06:59.095544458 +0800
+--- old/src/evdev-mt-touchpad-gestures.c	2025-01-21 15:25:40.457204514 +0800
++++ new/src/evdev-mt-touchpad-gestures.c	2025-01-21 16:04:17.172258372 +0800
 @@ -36,6 +36,14 @@
  
  #define HOLD_AND_MOTION_THRESHOLD 0.5 /* mm */
@@ -2689,7 +2689,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  	return raw;
  }
-@@ -216,24 +272,195 @@
+@@ -216,24 +272,222 @@
  	 * it twice (here and in tp_gesture_post_pointer_motion) with the same
  	 * event.
  	 */
@@ -2821,6 +2821,28 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
 +    return raw;
 +}
 +
++static void
++tp_unpin_edge_keep_dragging(const struct tp_dispatch *tp, struct tp_touch *t)
++{
++	struct phys_coords mm;
++	struct device_coords delta;
++
++	if (!t->pinned.is_pinned_edge_dragging)
++		return;
++
++	delta.x = abs(t->point.x - t->pinned.center.x);
++	delta.y = abs(t->point.y - t->pinned.center.y);
++
++	mm = evdev_device_unit_delta_to_mm(tp->device, &delta);
++
++	/* 9mm movement -> unpin */
++	if (hypot(mm.x, mm.y) >= 9) {
++		evdev_log_libinput_info(tp->device, "edge keep dragging movement -> unpin");
++		t->pinned.is_pinned_edge_dragging = false;
++		return;
++	}
++}
++
 +#define TIME_THRESHOLD 8400
  static void
  tp_gesture_post_pointer_motion(struct tp_dispatch *tp, uint64_t time)
@@ -2845,7 +2867,12 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
 +		}
 +	}
 +	uint32_t edgeMask = tp_move_drag_is_at_edge(tp, time);
-+	if (tp->nactive_slots == 1 && edgeMask && ((tp->buttons.is_clickpad && tp->buttons.state) || tp_tap_dragging(tp))) {
++	struct tp_touch *t = &tp->touches[0];
++	if (tp->nactive_slots == 1 ) { 
++		tp_unpin_edge_keep_dragging(tp, t);
++	}
++	if (tp->nactive_slots == 1 && !t->pinned.is_pinned_edge_dragging && edgeMask &&
++		((tp->buttons.is_clickpad && tp->buttons.state) || tp_tap_dragging(tp))) {
 +		if (tp->press_and_drag.prev_time != 0 && time > tp->press_and_drag.prev_time) {
 +			/* reset raw delta according to entered edge areas */
 +			if ((edgeMask & PRESS_AND_DRAG_LEFT_EDGE_BIT) || (edgeMask & PRESS_AND_DRAG_RIGHT_EDGE_BIT)) {
@@ -3673,8 +3700,8 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  void
 diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
---- old/src/evdev-mt-touchpad-tap.c	2024-12-23 20:25:10.858122530 +0800
-+++ new/src/evdev-mt-touchpad-tap.c	2024-12-23 20:42:47.399987968 +0800
+--- old/src/evdev-mt-touchpad-tap.c	2025-01-21 15:25:40.457204514 +0800
++++ new/src/evdev-mt-touchpad-tap.c	2025-01-21 16:28:30.245074336 +0800
 @@ -30,6 +30,7 @@
  #include "evdev-mt-touchpad.h"
  
@@ -3853,7 +3880,15 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  }
  
  static void
-@@ -335,11 +439,11 @@
+@@ -332,14 +436,19 @@
+ 		tp->tap.state = dest[nfingers_tapped - 1];
+ 		tp->tap.saved_press_time = time;
+ 		tp_tap_set_timer(tp, time);
++		if (nfingers_tapped == 1 && t != NULL) {
++			struct tp_touch *t1 = &tp->touches[0];
++			t1->pinned.is_pinned_edge_dragging = true;
++			t1->pinned.center = t->point;
++		}
  		break;
  	}
  	case TAP_EVENT_TIMEOUT:
@@ -4069,8 +4104,8 @@ diff -Naur old/src/evdev-mt-touchpad-thumb.c new/src/evdev-mt-touchpad-thumb.c
  	tp->thumb.lower_thumb_line = edges.y;
  
 diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
---- old/src/evdev-mt-touchpad.c	2024-12-02 20:21:23.955773693 +0800
-+++ new/src/evdev-mt-touchpad.c	2024-12-09 18:07:51.243249182 +0800
+--- old/src/evdev-mt-touchpad.c	2025-01-21 15:25:40.469204153 +0800
++++ new/src/evdev-mt-touchpad.c	2025-01-21 16:44:00.160024540 +0800
 @@ -38,7 +38,7 @@
  
  #define DEFAULT_TRACKPOINT_ACTIVITY_TIMEOUT ms2us(300)
@@ -4080,11 +4115,10 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  #define DEFAULT_KEYBOARD_ACTIVITY_TIMEOUT_2 ms2us(500)
  #define FAKE_FINGER_OVERFLOW bit(7)
  #define THUMB_IGNORE_SPEED_THRESHOLD 20 /* mm/s */
-@@ -329,6 +329,35 @@ tp_fake_finger_set(struct tp_dispatch *tp,
- 	}
+@@ -330,6 +330,35 @@
  }
  
-+static inline void
+ static inline void
 +tp_tool_key_set(struct tp_dispatch *tp,
 +		   unsigned int code,
 +		   bool is_press)
@@ -4113,10 +4147,11 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
 +	}
 +}
 +
- static inline void
++static inline void
  tp_new_touch(struct tp_dispatch *tp, struct tp_touch *t, uint64_t time)
  {
-@@ -346,6 +375,8 @@ tp_new_touch(struct tp_dispatch *tp, struct tp_touch *t, uint64_t time)
+ 	if (t->state == TOUCH_BEGIN ||
+@@ -346,6 +375,8 @@
  		tp->nfingers_down++;
  		t->state = TOUCH_UPDATE;
  		t->has_ended = false;
@@ -4125,7 +4160,11 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		return;
  	}
  
-@@ -362,7 +393,9 @@ tp_new_touch(struct tp_dispatch *tp, struct tp_touch *t, uint64_t time)
+@@ -359,10 +390,13 @@
+ 	t->palm.state = PALM_NONE;
+ 	t->state = TOUCH_HOVERING;
+ 	t->pinned.is_pinned = false;
++	t->pinned.is_pinned_edge_dragging = false;
  	t->speed.last_speed = 0;
  	t->speed.exceeded_count = 0;
  	t->hysteresis.x_motion_history = 0;
@@ -4135,7 +4174,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  }
  
  static inline void
-@@ -371,6 +404,7 @@ tp_begin_touch(struct tp_dispatch *tp, struct tp_touch *t, uint64_t time)
+@@ -371,6 +405,7 @@
  	t->dirty = true;
  	t->state = TOUCH_BEGIN;
  	t->initial_time = time;
@@ -4143,7 +4182,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	t->was_down = true;
  	tp->nfingers_down++;
  	t->palm.time = time;
-@@ -448,6 +482,14 @@ tp_end_touch(struct tp_dispatch *tp, struct tp_touch *t, uint64_t time)
+@@ -448,10 +483,19 @@
  		return;
  	}
  
@@ -4158,7 +4197,12 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	t->dirty = true;
  	t->palm.state = PALM_NONE;
  	t->state = TOUCH_END;
-@@ -515,6 +557,88 @@ rotated(struct tp_dispatch *tp, unsigned int code, int value)
+ 	t->pinned.is_pinned = false;
++	t->pinned.is_pinned_edge_dragging = false;
+ 	t->palm.time = 0;
+ 	t->speed.exceeded_count = 0;
+ 	tp->queued |= TOUCHPAD_EVENT_MOTION;
+@@ -515,6 +559,88 @@
  	return absinfo->maximum - (value - absinfo->minimum);
  }
  
@@ -4355,7 +4399,18 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		t->pinned.is_pinned = false;
  		return;
  	}
-@@ -841,16 +1007,100 @@ tp_touch_active(const struct tp_dispatch *tp, const struct tp_touch *t)
+@@ -827,6 +995,10 @@
+ 		t->pinned.is_pinned = true;
+ 		t->pinned.center = t->point;
+ 	}
++	if (tp->nactive_slots == 1) {
++		t = &tp->touches[0];
++		t->pinned.is_pinned_edge_dragging = true;
++	}
+ }
+ 
+ bool
+@@ -841,16 +1013,100 @@
  }
  
  bool
@@ -4692,8 +4747,8 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
 +	return (tp->tool_touches >> shift) & 0x1;
 +}
 diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
---- old/src/evdev-mt-touchpad.h	2024-12-02 20:21:23.955773693 +0800
-+++ new/src/evdev-mt-touchpad.h	2024-12-06 14:53:31.954666976 +0800
+--- old/src/evdev-mt-touchpad.h	2025-01-21 15:25:40.473204033 +0800
++++ new/src/evdev-mt-touchpad.h	2025-01-21 16:44:06.015870340 +0800
 @@ -132,6 +132,8 @@
  	TAP_STATE_2FGTAP_DRAGGING_2,
  	TAP_STATE_3FGTAP_DRAGGING_2,
@@ -4719,7 +4774,15 @@ diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
  	struct {
  		/* A quirk mostly used on Synaptics touchpads. In a
  		   transition to/from fake touches > num_slots, the current
-@@ -282,6 +289,18 @@
+@@ -229,6 +236,7 @@
+ 	 */
+ 	struct {
+ 		bool is_pinned;
++		bool is_pinned_edge_dragging;
+ 		struct device_coords center;
+ 	} pinned;
+ 
+@@ -282,6 +290,18 @@
  	SUSPEND_TABLET_MODE     = 0x8,
  };
  
