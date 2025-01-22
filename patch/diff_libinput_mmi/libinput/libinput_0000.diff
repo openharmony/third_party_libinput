@@ -2090,8 +2090,8 @@ diff -Naur old/src/evdev-joystick.h new/src/evdev-joystick.h
 +
 +#endif
 diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons.c
---- old/src/evdev-mt-touchpad-buttons.c	2024-12-02 20:21:23.943773189 +0800
-+++ new/src/evdev-mt-touchpad-buttons.c	2024-12-02 20:58:31.419498235 +0800
+--- old/src/evdev-mt-touchpad-buttons.c	2025-01-20 16:34:38.354868079 +0800
++++ new/src/evdev-mt-touchpad-buttons.c	2025-01-21 15:21:27.251412886 +0800
 @@ -25,6 +25,7 @@
  
  #include <limits.h>
@@ -2449,7 +2449,7 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
  		} else { /* main or no area (for clickfinger) is always BTN_LEFT */
  			button = BTN_LEFT;
  			want_left_handed = false;
-@@ -1299,10 +1547,25 @@
+@@ -1299,10 +1547,27 @@
  
  		if (want_left_handed)
  			button = evdev_to_left_handed(tp->device, button);
@@ -2470,13 +2470,15 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
  		tp->buttons.active_is_topbutton = is_top;
  		state = LIBINPUT_BUTTON_STATE_PRESSED;
 +		tp->buttons.area = button;
-+		if (current != BUTTON_EVENT_IN_BOTTOM_R) {
++		if (current == BUTTON_EVENT_IN_BOTTOM_L) {
++			tp->buttons.area = BTN_RIGHT_MENUE;
++		} else if (current != BUTTON_EVENT_IN_BOTTOM_R) {
 +			tp->buttons.area = BTN_LEFT;
 +		}
  	} else {
  		button = tp->buttons.active;
  		is_top = tp->buttons.active_is_topbutton;
-@@ -1310,7 +1573,6 @@
+@@ -1310,7 +1575,6 @@
  		tp->buttons.active_is_topbutton = 0;
  		state = LIBINPUT_BUTTON_STATE_RELEASED;
  	}
@@ -2484,7 +2486,7 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
  	tp->buttons.click_pending = false;
  
  	if (button)
-@@ -1335,7 +1597,7 @@
+@@ -1335,7 +1599,7 @@
  tp_button_touch_active(const struct tp_dispatch *tp,
  		       const struct tp_touch *t)
  {
@@ -2493,7 +2495,7 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
  }
  
  bool
-@@ -1345,3 +1607,35 @@
+@@ -1345,3 +1609,35 @@
  	return is_inside_top_button_area(tp, t) ||
  	       is_inside_bottom_button_area(tp, t);
  }
