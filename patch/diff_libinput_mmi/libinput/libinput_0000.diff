@@ -3939,16 +3939,78 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  		break;
  	case TAP_EVENT_BUTTON:
  		tp->tap.state = TAP_STATE_DEAD;
-@@ -447,7 +556,7 @@
- 			      tp->tap.saved_press_time,
- 			      2,
- 			      LIBINPUT_BUTTON_STATE_PRESSED);
+@@ -443,19 +552,23 @@
+ 		tp_tap_clear_timer(tp);
+ 		break;
+ 	case TAP_EVENT_RELEASE:
+-		tp_tap_notify(tp,
+-			      tp->tap.saved_press_time,
+-			      2,
+-			      LIBINPUT_BUTTON_STATE_PRESSED);
 -		if (tp->tap.drag_enabled) {
-+		if (tp->tap.drag_enabled && !evdev_device_has_model_quirk(tp->device, QUIRK_MODEL_HUAWEI_FREETOUCH_TOUCHPAD)) {
- 			tp->tap.state = TAP_STATE_2FGTAP_TAPPED;
- 			tp_tap_set_drag_timer(tp, time, 2);
+-			tp->tap.state = TAP_STATE_2FGTAP_TAPPED;
+-			tp_tap_set_drag_timer(tp, time, 2);
++		if (tp_edge_aft_for_tow_finger(tp, time)) {
++			tp->tap.state = TAP_STATE_IDLE;
  		} else {
-@@ -749,17 +858,13 @@
+ 			tp_tap_notify(tp,
+-				      tp->tap.saved_release_time,
+-				      2,
+-				      LIBINPUT_BUTTON_STATE_RELEASED);
+-			tp->tap.state = TAP_STATE_IDLE;
++			    tp->tap.saved_press_time,
++			    2,
++			    LIBINPUT_BUTTON_STATE_PRESSED);
++			if (tp->tap.drag_enabled && !evdev_device_has_model_quirk(tp->device, QUIRK_MODEL_HUAWEI_FREETOUCH_TOUCHPAD)) {
++				tp->tap.state = TAP_STATE_2FGTAP_TAPPED;
++				tp_tap_set_drag_timer(tp, time, 2);
++			} else {
++				tp_tap_notify(tp,
++					tp->tap.saved_release_time,
++					2,
++					LIBINPUT_BUTTON_STATE_RELEASED);
++				tp->tap.state = TAP_STATE_IDLE;
++			}
+ 		}
+ 		break;
+ 	case TAP_EVENT_MOTION:
+@@ -498,6 +611,35 @@
+ 	}
+ }
+ 
++static bool
++tp_edge_aft_for_tow_finger(struct tp_dispatch *tp, uint64_t time)
++{
++    double width, height;
++    evdev_device_get_size(tp->device, &width, &height);
++    struct phys_coords mm = { 15.0, 15.0 };
++
++	if (tp->gesture.touches[0] == NULL || tp->gesture.touches[1] == NULL) {
++		return false;
++	}
++    struct device_coords first = tp->gesture.touches[0]->point;
++    struct device_coords second = tp->gesture.touches[1]->point;
++
++    struct phys_coords first_mm = evdev_device_units_to_mm(tp->device, &first);
++    struct phys_coords second_mm = evdev_device_units_to_mm(tp->device, &second);
++
++	if (first_mm.x < mm.x || first_mm.x > width - mm.x || second_mm.x < mm.x || second_mm.x > width - mm.x) {
++		struct phys_coords delta_mm;
++        delta_mm.x = fabs(first_mm.x - second_mm.x);
++		delta_mm.y = fabs(first_mm.y - second_mm.y);
++		double distance_mm = hypot(delta_mm.x, delta_mm.y);
++		if (distance_mm > 0.5 * width) {
++			evdev_log_libinput_info(tp->device, "fingers on the edge, distance:%lf", distance_mm);
++			return true;
++		}
++	}
++	return false;
++}
++
+ static void
+ tp_tap_touch3_handle_event(struct tp_dispatch *tp,
+ 			   struct tp_touch *t,
+@@ -749,17 +891,13 @@
  		break;
  	}
  	case TAP_EVENT_RELEASE:
@@ -3968,7 +4030,7 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  		break;
  	case TAP_EVENT_MOTION:
  	case TAP_EVENT_TIMEOUT: {
-@@ -1143,6 +1248,12 @@
+@@ -1143,6 +1281,12 @@
  	case TAP_STATE_DEAD:
  		tp_tap_dead_handle_event(tp, t, event, time);
  		break;
@@ -3981,7 +4043,7 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  	}
  
  	if (tp->tap.state == TAP_STATE_IDLE || tp->tap.state == TAP_STATE_DEAD)
-@@ -1186,7 +1297,7 @@
+@@ -1186,7 +1330,7 @@
  	if (tp->semi_mt && tp->nfingers_down != tp->old_nfingers_down)
  		return false;
  
@@ -3990,7 +4052,7 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  }
  
  static bool
-@@ -1294,6 +1405,8 @@
+@@ -1294,6 +1438,8 @@
  	 */
  	switch (tp->tap.state) {
  	case TAP_STATE_TOUCH:
@@ -3999,7 +4061,7 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  	case TAP_STATE_1FGTAP_TAPPED:
  	case TAP_STATE_2FGTAP_TAPPED:
  	case TAP_STATE_3FGTAP_TAPPED:
-@@ -1419,23 +1532,7 @@
+@@ -1419,23 +1565,7 @@
  static enum libinput_config_tap_state
  tp_tap_default(struct evdev_device *evdev)
  {
@@ -4024,7 +4086,7 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  }
  
  static enum libinput_config_tap_state
-@@ -1499,7 +1596,7 @@
+@@ -1499,7 +1629,7 @@
  static inline enum libinput_config_drag_state
  tp_drag_default(struct evdev_device *device)
  {
@@ -4033,7 +4095,7 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  }
  
  static enum libinput_config_drag_state
-@@ -1661,3 +1758,63 @@
+@@ -1661,3 +1791,63 @@
  		return false;
  	}
  }
@@ -5000,7 +5062,7 @@ diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
  
  int
  tp_tap_handle_state(struct tp_dispatch *tp, uint64_t time);
-@@ -767,4 +863,22 @@
+@@ -767,4 +863,25 @@
  struct tp_touch*
  tp_thumb_get_touch(struct tp_dispatch *tp);
  
@@ -5021,6 +5083,9 @@ diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
 +
 +void
 +tp_clickpad_rightbutton_apply_config(struct evdev_device *device);
++
++static bool
++tp_edge_aft_for_tow_finger(struct tp_dispatch *tp, uint64_t time);
 +
  #endif
 diff -Naur old/src/evdev-privacy-switch.c new/src/evdev-privacy-switch.c
