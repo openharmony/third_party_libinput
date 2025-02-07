@@ -8561,7 +8561,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +LIBINPUT_EXPORT double
 +libinput_touchpad_device_get_ppi(struct libinput_device *device)
 +{
-+	const int32_t default_ppi = 29.8;
++	const double default_ppi = 29.8;
 +	struct evdev_dispatch *dispatch = evdev_device(device)->dispatch;
 +	if (dispatch == NULL) {
 +		return default_ppi;
@@ -8577,7 +8577,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +LIBINPUT_EXPORT double
 +libinput_touchpad_device_get_hypot_size(struct libinput_device *device)
 +{
-+	const int32_t default_hypot_size = 140.0;
++	const double default_hypot_size = 140.0;
 +	struct evdev_dispatch *dispatch = evdev_device(device)->dispatch;
 +	if (dispatch == NULL) {
 +		return default_hypot_size;
