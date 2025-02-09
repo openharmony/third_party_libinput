@@ -775,7 +775,7 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
  /**
   * @ingroup config
   */
-@@ -6398,7 +7026,159 @@
+@@ -6398,7 +7026,168 @@
  unsigned int
  libinput_device_config_rotation_get_default_angle(struct libinput_device *device);
  
@@ -930,6 +930,15 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
 +
 +void
 +libinput_touchpad_event_clear(struct libinput_device *device);
++
++int32_t
++libinput_touchpad_device_get_frequency(struct libinput_device *device);
++
++double
++libinput_touchpad_device_get_ppi(struct libinput_device *device);
++
++double
++libinput_touchpad_device_get_hypot_size(struct libinput_device *device);
  #ifdef __cplusplus
  }
  #endif
@@ -4827,15 +4836,36 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  tp_init_sendevents(struct tp_dispatch *tp,
  		   struct evdev_device *device)
  {
-@@ -3775,6 +4125,7 @@
+@@ -3512,6 +3862,19 @@
+ 			    tp_keyboard_timeout, tp);
+ }
+ 
++static void 
++tp_init_touchpad_info(struct tp_dispatch *tp,
++		   struct evdev_device *device)
++{
++	double width, height;
++	evdev_device_get_size(tp->device, &width, &height);
++	tp->device->touchpad_hypot_size = sqrt(pow(width, 2) + pow(height, 2));
++	const struct input_absinfo *x, *y;
++	x = libevdev_get_abs_info(device->evdev, ABS_X);
++	y = libevdev_get_abs_info(device->evdev, ABS_Y);
++	tp->device->touchpad_ppi = sqrt(pow(x->maximum, 2) + pow(y->maximum, 2)) / tp->device->touchpad_hypot_size;
++}
++
+ static bool
+ tp_pass_sanity_check(struct tp_dispatch *tp,
+ 		     struct evdev_device *device)
+@@ -3775,6 +4138,8 @@
  	tp_init_scroll(tp, device);
  	tp_init_gesture(tp);
  	tp_init_thumb(tp);
 +	tp_init_axis_speed_gain(tp, device);
++	tp_init_touchpad_info(tp, device);
  
  	/* Lenovo X1 Gen6 buffers the events in a weird way, making jump
  	 * detection impossible. See
-@@ -3788,6 +4139,10 @@
+@@ -3788,6 +4153,10 @@
  	if (tp->gesture.enabled)
  		device->seat_caps |= EVDEV_DEVICE_GESTURE;
  
@@ -4846,7 +4876,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	return true;
  }
  
-@@ -3971,6 +4326,14 @@
+@@ -3971,6 +4340,14 @@
  
  	tp = zalloc(sizeof *tp);
  
@@ -4861,7 +4891,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	if (!tp_init(tp, device)) {
  		tp_interface_destroy(&tp->base);
  		return NULL;
-@@ -3988,3 +4351,27 @@
+@@ -3988,3 +4365,27 @@
  
  	return &tp->base;
  }
@@ -6022,7 +6052,16 @@ diff -Naur old/src/evdev.h new/src/evdev.h
  	int dpi; /* HW resolution */
  	double trackpoint_multiplier; /* trackpoint constant multiplier */
  	bool use_velocity_averaging; /* whether averaging should be applied on velocity calculation */
-@@ -271,6 +280,15 @@
+@@ -185,6 +194,8 @@
+ 	struct ratelimit nonpointer_rel_limit; /* ratelimit for REL_* events from non-pointer devices */
+ 	uint32_t model_flags;
+ 	struct mtdev *mtdev;
++	double touchpad_ppi;
++	double touchpad_hypot_size;
+ 
+ 	struct {
+ 		const struct input_absinfo *absinfo_x, *absinfo_y;
+@@ -271,6 +282,15 @@
  		uint32_t button_mask;
  		uint64_t first_event_time;
  	} middlebutton;
@@ -6038,7 +6077,7 @@ diff -Naur old/src/evdev.h new/src/evdev.h
  };
  
  static inline struct evdev_device *
-@@ -354,6 +372,8 @@
+@@ -354,6 +374,8 @@
  	DISPATCH_TABLET,
  	DISPATCH_TABLET_PAD,
  	DISPATCH_TOTEM,
@@ -6047,7 +6086,7 @@ diff -Naur old/src/evdev.h new/src/evdev.h
  };
  
  struct evdev_dispatch {
-@@ -407,6 +427,10 @@
+@@ -407,6 +429,10 @@
  			 struct device_coords *point);
  
  void
@@ -6058,7 +6097,7 @@ diff -Naur old/src/evdev.h new/src/evdev.h
  evdev_transform_relative(struct evdev_device *device,
  			 struct device_coords *point);
  
-@@ -431,12 +455,21 @@
+@@ -431,12 +457,21 @@
  evdev_device_init_pointer_acceleration(struct evdev_device *device,
  				       struct motion_filter *filter);
  
@@ -6080,7 +6119,7 @@ diff -Naur old/src/evdev.h new/src/evdev.h
  struct evdev_dispatch *
  evdev_tablet_create(struct evdev_device *device);
  
-@@ -474,6 +507,12 @@
+@@ -474,6 +509,12 @@
  evdev_device_get_name(struct evdev_device *device);
  
  unsigned int
@@ -6093,7 +6132,7 @@ diff -Naur old/src/evdev.h new/src/evdev.h
  evdev_device_get_id_product(struct evdev_device *device);
  
  unsigned int
-@@ -482,6 +521,19 @@
+@@ -482,6 +523,19 @@
  struct udev_device *
  evdev_device_get_udev_device(struct evdev_device *device);
  
@@ -6113,7 +6152,7 @@ diff -Naur old/src/evdev.h new/src/evdev.h
  void
  evdev_device_set_default_calibration(struct evdev_device *device,
  				     const float calibration[6]);
-@@ -507,6 +559,9 @@
+@@ -507,6 +561,9 @@
  int
  evdev_device_get_touch_count(struct evdev_device *device);
  
@@ -6123,7 +6162,7 @@ diff -Naur old/src/evdev.h new/src/evdev.h
  int
  evdev_device_has_switch(struct evdev_device *device,
  			enum libinput_switch sw);
-@@ -561,6 +616,19 @@
+@@ -561,6 +618,19 @@
  			    uint64_t time,
  			    unsigned int button,
  			    enum libinput_button_state state);
@@ -6143,7 +6182,7 @@ diff -Naur old/src/evdev.h new/src/evdev.h
  void
  evdev_pointer_notify_physical_button(struct evdev_device *device,
  				     uint64_t time,
-@@ -646,6 +714,9 @@
+@@ -646,6 +716,9 @@
  static inline double
  evdev_convert_to_mm(const struct input_absinfo *absinfo, double v)
  {
@@ -6153,7 +6192,7 @@ diff -Naur old/src/evdev.h new/src/evdev.h
  	double value = v - absinfo->minimum;
  	return value/absinfo->resolution;
  }
-@@ -781,12 +852,15 @@
+@@ -781,12 +854,15 @@
  
  	if (!is_logged(evdev_libinput_context(device), priority))
  		return;
@@ -6171,7 +6210,7 @@ diff -Naur old/src/evdev.h new/src/evdev.h
  		 (priority > LIBINPUT_LOG_PRIORITY_DEBUG) ?  device->log_prefix_name : "",
  		 (priority > LIBINPUT_LOG_PRIORITY_DEBUG) ?  ": " : "",
  		 format);
-@@ -855,6 +929,9 @@
+@@ -855,6 +931,9 @@
  #define evdev_log_bug_kernel(d_, ...) evdev_log_msg((d_), LIBINPUT_LOG_PRIORITY_ERROR, "kernel bug: " __VA_ARGS__)
  #define evdev_log_bug_libinput(d_, ...) evdev_log_msg((d_), LIBINPUT_LOG_PRIORITY_ERROR, "libinput bug: " __VA_ARGS__)
  #define evdev_log_bug_client(d_, ...) evdev_log_msg((d_), LIBINPUT_LOG_PRIORITY_ERROR, "client bug: " __VA_ARGS__)
@@ -6181,7 +6220,7 @@ diff -Naur old/src/evdev.h new/src/evdev.h
  
  #define evdev_log_debug_ratelimit(d_, r_, ...) \
  	evdev_log_msg_ratelimit((d_), (r_), LIBINPUT_LOG_PRIORITY_DEBUG, __VA_ARGS__)
-@@ -1028,7 +1105,8 @@
+@@ -1028,7 +1107,8 @@
  				   "Axis %#x value %d is outside expected range [%d, %d]\n"
  				   "See %s/absolute_coordinate_ranges.html for details\n",
  				   code, value, min, max,
@@ -6191,7 +6230,7 @@ diff -Naur old/src/evdev.h new/src/evdev.h
  	}
  }
  
-@@ -1047,4 +1125,7 @@
+@@ -1047,4 +1127,7 @@
  	free(kbd);
  }
  
@@ -6934,7 +6973,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_event_touch_get_y_transformed(struct libinput_event_touch *event,
  				       uint32_t height)
  {
-@@ -945,7 +1109,80 @@
+@@ -945,7 +1109,22 @@
  }
  
  LIBINPUT_EXPORT double
@@ -6955,15 +6994,13 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +LIBINPUT_EXPORT double
 +libinput_event_touch_get_tool_x_transformed(struct libinput_event_touch *event,
 +				       uint32_t width)
-+{
-+	struct evdev_device *device = evdev_device(event->base.device);
-+
-+	require_event_type(libinput_event_get_context(&event->base),
-+			   event->base.type,
-+			   0,
-+			   LIBINPUT_EVENT_TOUCH_DOWN,
-+			   LIBINPUT_EVENT_TOUCH_MOTION);
-+
+ {
+ 	struct evdev_device *device = evdev_device(event->base.device);
+ 
+@@ -955,9 +1134,343 @@
+ 			   LIBINPUT_EVENT_TOUCH_DOWN,
+ 			   LIBINPUT_EVENT_TOUCH_MOTION);
+ 
 +	return evdev_device_transform_x(device, event->tool_rect.x, width);
 +}
 +
@@ -7013,13 +7050,15 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +LIBINPUT_EXPORT double
 +libinput_event_touch_get_tool_width_transformed(struct libinput_event_touch *event,
 +				       uint32_t width)
- {
- 	struct evdev_device *device = evdev_device(event->base.device);
- 
-@@ -955,9 +1192,285 @@
- 			   LIBINPUT_EVENT_TOUCH_DOWN,
- 			   LIBINPUT_EVENT_TOUCH_MOTION);
- 
++{
++	struct evdev_device *device = evdev_device(event->base.device);
++
++	require_event_type(libinput_event_get_context(&event->base),
++			   event->base.type,
++			   0,
++			   LIBINPUT_EVENT_TOUCH_DOWN,
++			   LIBINPUT_EVENT_TOUCH_MOTION);
++
 +	return evdev_device_transform_x(device, event->tool_rect.w, width);
 +}
 +
@@ -8248,7 +8287,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_event_gesture_get_base_event(struct libinput_event_gesture *event)
  {
  	require_event_type(libinput_event_get_context(&event->base),
-@@ -4764,3 +5959,244 @@
+@@ -4764,3 +5959,301 @@
  	}
  }
  #endif
@@ -8492,6 +8531,63 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +		t->tool_type = 0;
 +		t->palm.state = PALM_NONE;
 +	}
++}
++
++LIBINPUT_EXPORT int32_t
++libinput_touchpad_device_get_frequency(struct libinput_device *device)
++{
++	const int32_t default_frequency = 125;
++	struct evdev_dispatch *dispatch = evdev_device(device)->dispatch;
++	if (dispatch == NULL) {
++		return default_frequency;
++	}
++	struct tp_dispatch *tp = tp_dispatch(dispatch);
++	if (tp == NULL) {
++		return default_frequency;
++	}
++
++	uint32_t frequency = default_frequency;
++	struct quirks_context *quirks;
++	struct quirks *q;
++
++	quirks = evdev_libinput_context(tp->device)->quirks;
++	q = quirks_fetch_for_device(quirks, tp->device->udev_device);
++	if (!q || !quirks_get_uint32(q, QUIRK_ATTR_TOUCHPAD_FREQUENCY, &frequency))
++		return default_frequency;
++	quirks_unref(q);
++	return frequency;
++}
++
++LIBINPUT_EXPORT double
++libinput_touchpad_device_get_ppi(struct libinput_device *device)
++{
++	const double default_ppi = 29.8;
++	struct evdev_dispatch *dispatch = evdev_device(device)->dispatch;
++	if (dispatch == NULL) {
++		return default_ppi;
++	}
++	struct tp_dispatch *tp = tp_dispatch(dispatch);
++	if (tp == NULL) {
++		return default_ppi;
++	}
++	double ppi = tp->device->touchpad_ppi;
++	return ppi;
++}
++
++LIBINPUT_EXPORT double
++libinput_touchpad_device_get_hypot_size(struct libinput_device *device)
++{
++	const double default_hypot_size = 140.0;
++	struct evdev_dispatch *dispatch = evdev_device(device)->dispatch;
++	if (dispatch == NULL) {
++		return default_hypot_size;
++	}
++	struct tp_dispatch *tp = tp_dispatch(dispatch);
++	if (tp == NULL) {
++		return default_hypot_size;
++	}
++	double hypot_size = tp->device->touchpad_hypot_size;
++	return hypot_size;
 +}
 diff -Naur old/src/libinput.h new/src/libinput.h
 --- old/src/libinput.h	2021-01-01 00:00:00.000000000 +0000
@@ -9257,7 +9353,7 @@ diff -Naur old/src/libinput.h new/src/libinput.h
  /**
   * @ingroup config
   */
-@@ -6398,6 +7026,157 @@
+@@ -6398,6 +7026,166 @@
  unsigned int
  libinput_device_config_rotation_get_default_angle(struct libinput_device *device);
  
@@ -9412,6 +9508,15 @@ diff -Naur old/src/libinput.h new/src/libinput.h
 +
 +void
 +libinput_touchpad_event_clear(struct libinput_device *device);
++
++int32_t
++libinput_touchpad_device_get_frequency(struct libinput_device *device);
++
++double
++libinput_touchpad_device_get_ppi(struct libinput_device *device);
++
++double
++libinput_touchpad_device_get_hypot_size(struct libinput_device *device);
  #ifdef __cplusplus
  }
  #endif
@@ -9459,16 +9564,17 @@ diff -Naur old/src/quirks.c new/src/quirks.c
  
  	case QUIRK_ATTR_SIZE_HINT:			return "AttrSizeHint";
  	case QUIRK_ATTR_TOUCH_SIZE_RANGE:		return "AttrTouchSizeRange";
-@@ -290,6 +291,8 @@
+@@ -290,6 +291,9 @@
  	case QUIRK_ATTR_MSC_TIMESTAMP:			return "AttrMscTimestamp";
  	case QUIRK_ATTR_EVENT_CODE:			return "AttrEventCode";
  	case QUIRK_ATTR_INPUT_PROP:			return "AttrInputProp";
 +	case QUIRK_ATTR_DWT_POINTER_UNLOCK_TIME_THRESHOLD:	return "AttrDwtPointerUnlockTimeThreshold";
 +	case QUIRK_ATTR_TOUCHPAD_AXIS_SPEED_GAIN:	return "AttrTouchpadAxisSpeedGain";
++	case QUIRK_ATTR_TOUCHPAD_FREQUENCY: return "AttrTouchpadFrequency";
  	default:
  		abort();
  	}
-@@ -859,6 +862,20 @@
+@@ -859,6 +863,27 @@
  		p->type = PT_TUPLES;
  
  		rc = true;
@@ -9486,6 +9592,13 @@ diff -Naur old/src/quirks.c new/src/quirks.c
 +		p->type = PT_DOUBLE;
 +		p->value.d = d;
 +		rc = true;
++	} else if (streq(key, quirk_get_name(QUIRK_ATTR_TOUCHPAD_FREQUENCY))) {
++		p->id = QUIRK_ATTR_TOUCHPAD_FREQUENCY;
++		if (!safe_atou(value, &v))
++			goto out;
++		p->type = PT_UINT;
++		p->value.u = v;
++		rc = true;
  	} else {
  		qlog_error(ctx, "Unknown key %s in %s\n", key, s->name);
  	}
@@ -9500,12 +9613,13 @@ diff -Naur old/src/quirks.h new/src/quirks.h
  
  	_QUIRK_LAST_MODEL_QUIRK_, /* Guard: do not modify */
  
-@@ -109,6 +110,8 @@
+@@ -109,6 +110,9 @@
  	QUIRK_ATTR_MSC_TIMESTAMP,
  	QUIRK_ATTR_EVENT_CODE,
  	QUIRK_ATTR_INPUT_PROP,
 +	QUIRK_ATTR_DWT_POINTER_UNLOCK_TIME_THRESHOLD,
 +	QUIRK_ATTR_TOUCHPAD_AXIS_SPEED_GAIN,
++	QUIRK_ATTR_TOUCHPAD_FREQUENCY,
  
  	_QUIRK_LAST_ATTR_QUIRK_, /* Guard: do not modify */
  };
