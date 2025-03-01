@@ -3854,7 +3854,7 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
  		tp_tap_set_timer(tp, time);
  		break;
  	case TAP_EVENT_RELEASE:
-+		if (tp->buttons.is_clickpad && tp->buttons.state) {
++		if (tp->buttons.is_clickpad && (tp->buttons.state || (tp->queued & TOUCHPAD_EVENT_BUTTON_RELEASE))) {
 +			tp->tap.state = TAP_STATE_IDLE;
 +			break;
 +		}
