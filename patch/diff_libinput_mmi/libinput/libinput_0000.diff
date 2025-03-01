@@ -1248,7 +1248,17 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  
  	return true;
  }
-@@ -528,6 +572,14 @@
+@@ -469,6 +513,9 @@
+ 		     struct input_event *e, uint64_t time)
+ {
+ 	enum key_type type;
++  if (e->code == KEY_POWER) {
++     evdev_log_libinput_info(dispatch->device, "Power has been reported:%d", e->value);
++  }
+ 
+ 	/* ignore kernel key repeat */
+ 	if (e->value == 2)
+@@ -528,6 +575,14 @@
  {
  	struct mt_slot *slot = &dispatch->mt.slots[dispatch->mt.slot];
  
@@ -1263,7 +1273,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  	if (e->code == ABS_MT_SLOT) {
  		if ((size_t)e->value >= dispatch->mt.slots_len) {
  			evdev_log_bug_libinput(device,
-@@ -541,6 +593,16 @@
+@@ -541,6 +596,16 @@
  	}
  
  	switch (e->code) {
@@ -1280,7 +1290,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  	case ABS_MT_TRACKING_ID:
  		if (e->value >= 0) {
  			dispatch->pending_event |= EVDEV_ABSOLUTE_MT;
-@@ -598,6 +660,42 @@
+@@ -598,6 +663,42 @@
  			break;
  		}
  		dispatch->pending_event |= EVDEV_ABSOLUTE_MT;
@@ -1323,7 +1333,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  		slot->dirty = true;
  		break;
  	}
-@@ -608,6 +706,11 @@
+@@ -608,6 +709,11 @@
  				 struct evdev_device *device,
  				 struct input_event *e)
  {
@@ -1335,7 +1345,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  	switch (e->code) {
  	case ABS_X:
  		evdev_device_check_abs_axis_range(device, e->code, e->value);
-@@ -619,6 +722,10 @@
+@@ -619,6 +725,10 @@
  		dispatch->abs.point.y = e->value;
  		dispatch->pending_event |= EVDEV_ABSOLUTE_MOTION;
  		break;
@@ -1346,7 +1356,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  	}
  }
  
-@@ -920,6 +1027,10 @@
+@@ -920,6 +1030,10 @@
  			fallback_flush_absolute_motion(dispatch,
  						       device,
  						       time);
@@ -1357,7 +1367,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  		}
  	}
  
-@@ -1556,6 +1667,8 @@
+@@ -1556,6 +1670,8 @@
  
  	for (slot = 0; slot < num_slots; ++slot) {
  		slots[slot].seat_slot = -1;
@@ -1366,7 +1376,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  
  		if (evdev_need_mtdev(device))
  			continue;
-@@ -1718,3 +1831,11 @@
+@@ -1718,3 +1834,11 @@
  
  	return &dispatch->base;
  }
