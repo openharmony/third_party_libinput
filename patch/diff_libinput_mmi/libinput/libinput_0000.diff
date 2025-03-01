@@ -6289,8 +6289,8 @@ diff -Naur old/src/evdev.h new/src/evdev.h
 +
  #endif /* EVDEV_H */
 diff -Naur old/src/libinput-private.h new/src/libinput-private.h
---- old/src/libinput-private.h	2025-02-28 19:19:14.899734484 +0800
-+++ new/src/libinput-private.h	2025-02-28 19:23:15.512039782 +0800
+--- old/src/libinput-private.h	2021-01-01 00:00:00.000000000 +0000
++++ new/src/libinput-private.h	2021-01-01 00:00:00.000000000 +0000
 @@ -43,12 +43,25 @@
  #include "libinput-version.h"
  
