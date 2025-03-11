@@ -29,6 +29,7 @@
             udev_device_property_add*;
             udev_device_property_remove*;
             udev_device_record_devnode*;
+            libinput_set_touch_event_type*;
         };
     local:
         *;
