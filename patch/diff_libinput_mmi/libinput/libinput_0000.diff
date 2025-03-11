@@ -6756,7 +6756,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  };
  
  struct libinput_event_tablet_pad {
-@@ -337,6 +360,39 @@
+@@ -337,6 +360,45 @@
  	libinput->log_handler = log_handler;
  }
  
