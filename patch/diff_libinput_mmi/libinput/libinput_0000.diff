@@ -3802,7 +3802,16 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  		/* Immediately switch to new mode to avoid initial latency */
  		} else if (!tp->gesture.started) {
  			tp->gesture.finger_count = active_touches;
-@@ -1453,6 +2217,9 @@
+@@ -1446,13 +2210,17 @@
+ 			 * NONE to re-evaluate leftmost and rightmost touches
+ 			 */
+ 			if (tp->gesture.state == GESTURE_STATE_UNKNOWN ||
+-			    tp->gesture.state == GESTURE_STATE_POINTER_MOTION) {
++			    tp->gesture.state == GESTURE_STATE_POINTER_MOTION ||
++			    tp->gesture.state == GESTURE_STATE_SCROLL) {
+ 				tp_gesture_handle_event(tp,
+ 							GESTURE_EVENT_RESET,
+ 							time);
  			}
  		/* Else debounce finger changes */
  		} else if (active_touches != tp->gesture.finger_count_pending) {
@@ -3812,7 +3821,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  			tp->gesture.finger_count_pending = active_touches;
  			libinput_timer_set(&tp->gesture.finger_count_switch_timer,
  				time + DEFAULT_GESTURE_SWITCH_TIMEOUT);
-@@ -1504,6 +2271,41 @@
+@@ -1504,6 +2272,41 @@
  	       LIBINPUT_CONFIG_HOLD_DISABLED;
  }
  
@@ -3854,7 +3863,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  void
  tp_init_gesture(struct tp_dispatch *tp)
  {
-@@ -1539,6 +2341,10 @@
+@@ -1539,6 +2342,10 @@
  			    tp_libinput_context(tp),
  			    timer_name,
  			    tp_gesture_hold_timeout, tp);
