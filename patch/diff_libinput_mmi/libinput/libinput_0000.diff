@@ -5632,7 +5632,7 @@ diff -Naur old/src/evdev-tablet.c new/src/evdev-tablet.c
  
  	/* If resolution is nonzero, it's in units/radian. But require
  	 * a min/max less/greater than zero so we can assume 0 is the
-@@ -675,6 +680,18 @@
+@@ -675,6 +680,22 @@
  	}
  }
  
@@ -5644,14 +5644,18 @@ diff -Naur old/src/evdev-tablet.c new/src/evdev-tablet.c
 +	const struct input_absinfo *absinfo;
 +
 +	a = LIBINPUT_TABLET_TOOL_AXIS_ANGLE;
-+	absinfo = libevdev_get_abs_info(device->evdev, ABS_MT_ANGLE);
-+	tablet->axes.angle = absinfo->value;
++	if (bit_is_set(tablet->changed_axes, a)) {
++		absinfo = libevdev_get_abs_info(device->evdev, ABS_MT_ANGLE);
++		tablet->axes.angle = absinfo->value;
++	} else {
++		tablet->axes.angle = 0;
++	}
 +}
 +
  static void
  tablet_smoothen_axes(const struct tablet_dispatch *tablet,
  		     struct tablet_axes *axes)
-@@ -722,6 +739,7 @@
+@@ -722,6 +743,7 @@
  	tablet_update_slider(tablet, device);
  	tablet_update_tilt(tablet, device);
  	tablet_update_wheel(tablet, device);
@@ -5659,7 +5663,7 @@ diff -Naur old/src/evdev-tablet.c new/src/evdev-tablet.c
  	/* We must check ROTATION_Z after TILT_X/Y so that the tilt axes are
  	 * already normalized and set if we have the mouse/lens tool */
  	tablet_update_rotation(tablet, device);
-@@ -734,6 +752,7 @@
+@@ -734,6 +756,7 @@
  	axes.wheel = tablet->axes.wheel;
  	axes.wheel_discrete = tablet->axes.wheel_discrete;
  	axes.rotation = tablet->axes.rotation;
@@ -5667,7 +5671,7 @@ diff -Naur old/src/evdev-tablet.c new/src/evdev-tablet.c
  
  	rc = true;
  
-@@ -991,6 +1010,8 @@
+@@ -991,6 +1014,8 @@
  		copy_axis_cap(tablet, tool, LIBINPUT_TABLET_TOOL_AXIS_SLIDER);
  	if (axes & WACOM_AXIS_TYPE_PRESSURE)
  		copy_axis_cap(tablet, tool, LIBINPUT_TABLET_TOOL_AXIS_PRESSURE);
@@ -5676,7 +5680,7 @@ diff -Naur old/src/evdev-tablet.c new/src/evdev-tablet.c
  
  	rc = 0;
  
-@@ -1026,6 +1047,7 @@
+@@ -1026,6 +1051,7 @@
  		copy_axis_cap(tablet, tool, LIBINPUT_TABLET_TOOL_AXIS_TILT_X);
  		copy_axis_cap(tablet, tool, LIBINPUT_TABLET_TOOL_AXIS_TILT_Y);
  		copy_axis_cap(tablet, tool, LIBINPUT_TABLET_TOOL_AXIS_SLIDER);
@@ -5684,7 +5688,7 @@ diff -Naur old/src/evdev-tablet.c new/src/evdev-tablet.c
  
  		/* Rotation is special, it can be either ABS_Z or
  		 * BTN_TOOL_MOUSE+ABS_TILT_X/Y. Aiptek tablets have
-@@ -1107,9 +1129,15 @@
+@@ -1107,9 +1133,15 @@
  		tool->pressure.heuristic_state = PRESSURE_HEURISTIC_STATE_PROXIN1;
  	}
  
@@ -5700,7 +5704,7 @@ diff -Naur old/src/evdev-tablet.c new/src/evdev-tablet.c
  
  	if (q && quirks_get_range(q, QUIRK_ATTR_PRESSURE_RANGE, &r)) {
  		if (r.lower >= r.upper) {
-@@ -1184,6 +1212,7 @@
+@@ -1184,6 +1216,7 @@
  			.serial = serial,
  			.tool_id = tool_id,
  			.refcount = 1,
@@ -5708,7 +5712,7 @@ diff -Naur old/src/evdev-tablet.c new/src/evdev-tablet.c
  		};
  
  		tool_set_pressure_thresholds(tablet, tool);
-@@ -2563,6 +2592,34 @@
+@@ -2563,6 +2596,34 @@
  	return true;
  }
  
@@ -5743,7 +5747,7 @@ diff -Naur old/src/evdev-tablet.c new/src/evdev-tablet.c
  static int
  tablet_init(struct tablet_dispatch *tablet,
  	    struct evdev_device *device)
-@@ -2577,6 +2634,7 @@
+@@ -2577,6 +2638,7 @@
  	tablet->status = TABLET_NONE;
  	tablet->current_tool.type = LIBINPUT_TOOL_NONE;
  	list_init(&tablet->tool_list);
@@ -5751,7 +5755,7 @@ diff -Naur old/src/evdev-tablet.c new/src/evdev-tablet.c
  
  	if (tablet_reject_device(device))
  		return -1;
-@@ -2604,7 +2662,7 @@
+@@ -2604,7 +2666,7 @@
  	tablet_init_smoothing(device, tablet);
  
  	for (axis = LIBINPUT_TABLET_TOOL_AXIS_X;
@@ -6471,7 +6475,7 @@ diff -Naur old/src/libinput-private.h new/src/libinput-private.h
  /*
   * A coordinate pair in device coordinates, capable of holding non discrete
   * values, this is necessary e.g. when device coordinates get averaged.
-@@ -424,7 +437,9 @@
+@@ -424,10 +437,12 @@
  	LIBINPUT_TABLET_TOOL_AXIS_SLIDER = 8,
  	LIBINPUT_TABLET_TOOL_AXIS_REL_WHEEL = 9,
  	LIBINPUT_TABLET_TOOL_AXIS_SIZE_MAJOR = 10,
@@ -6481,7 +6485,11 @@ diff -Naur old/src/libinput-private.h new/src/libinput-private.h
 +	LIBINPUT_TABLET_TOOL_AXIS_ANGLE = 13,
  };
  
- #define LIBINPUT_TABLET_TOOL_AXIS_MAX LIBINPUT_TABLET_TOOL_AXIS_SIZE_MINOR
+-#define LIBINPUT_TABLET_TOOL_AXIS_MAX LIBINPUT_TABLET_TOOL_AXIS_SIZE_MINOR
++#define LIBINPUT_TABLET_TOOL_AXIS_MAX LIBINPUT_TABLET_TOOL_AXIS_ANGLE
+ 
+ struct tablet_axes {
+ 	struct device_coords point;
 @@ -440,6 +455,7 @@
  	double wheel;
  	int wheel_discrete;
