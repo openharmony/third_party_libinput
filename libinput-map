@@ -18,6 +18,9 @@
         extern "C++" {
 			libinput_toggle_caps_key*;
             libinput_create_keyboard_event*;
+            libinput_create_pointer_event*;
+	        libinput_create_gesture_event*;
+            libinput_create_touch_event*;
             libinput_event_touch_get_slot*;
             libinput_device_config_tap_set_drag_enabled*;
             libinput_touchpad_event_clear*;
