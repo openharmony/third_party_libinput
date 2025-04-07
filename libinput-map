@@ -33,6 +33,8 @@
             udev_device_property_remove*;
             udev_device_record_devnode*;
             libinput_set_touch_event_type*;
+		    libinput_event_vtrackpad_get_dx_unaccelerated*;
+            libinput_event_vtrackpad_get_dy_unaccelerated*;
         };
     local:
         *;
