@@ -628,11 +628,11 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
 + * Get the current side rotation angle of the stylus.
 + *
 + * @param tool The libinput tool
-+ * @return angle value of the stylus
++ * @return twist value of the stylus
 + *
 + */
 +int32_t
-+libinput_event_tablet_tool_get_angle(struct libinput_event_tablet_tool *event);
++libinput_event_tablet_tool_get_twist(struct libinput_event_tablet_tool *event);
 +
 +/**
   * @ingroup event_tablet
@@ -1136,7 +1136,7 @@ diff -Naur old/include/linux/freebsd/input-event-codes.h new/include/linux/freeb
 +#define ABS_HAND_FEATURE 0x21
  #define ABS_MISC		0x28
 +#define ABS_MT_MOVEFLAG	0x29
-+#define ABS_MT_ANGLE	0x2c
++#define ABS_MT_TWIST	0x2c
  
  /*
   * 0x2e is reserved and should not be used in input drivers.
@@ -1170,7 +1170,7 @@ diff -Naur old/include/linux/linux/input-event-codes.h new/include/linux/linux/i
 +#define ABS_HAND_FEATURE 0x21
  #define ABS_MISC		0x28
 +#define ABS_MT_MOVEFLAG	0x29
-+#define ABS_MT_ANGLE	0x2c
++#define ABS_MT_TWIST	0x2c
  
  /*
   * 0x2e is reserved and should not be used in input drivers.
@@ -5711,7 +5711,7 @@ diff -Naur old/src/evdev-tablet.c new/src/evdev-tablet.c
  	case ABS_DISTANCE:
  	case ABS_WHEEL:
 +	case ABS_MT_TOOL_TYPE:
-+	case ABS_MT_ANGLE:
++	case ABS_MT_TWIST:
  		axis = evcode_to_axis(e->code);
  		if (axis == LIBINPUT_TABLET_TOOL_AXIS_NONE) {
  			evdev_log_bug_libinput(device,
@@ -5740,18 +5740,18 @@ diff -Naur old/src/evdev-tablet.c new/src/evdev-tablet.c
  }
  
 +static inline void
-+tablet_update_angle(struct tablet_dispatch *tablet,
++tablet_update_twist(struct tablet_dispatch *tablet,
 +		    struct evdev_device *device)
 +{
 +	int a;
 +	const struct input_absinfo *absinfo;
 +
-+	a = LIBINPUT_TABLET_TOOL_AXIS_ANGLE;
++	a = LIBINPUT_TABLET_TOOL_AXIS_TWIST;
 +	if (bit_is_set(tablet->changed_axes, a)) {
-+		absinfo = libevdev_get_abs_info(device->evdev, ABS_MT_ANGLE);
-+		tablet->axes.angle = absinfo->value;
++		absinfo = libevdev_get_abs_info(device->evdev, ABS_MT_TWIST);
++		tablet->axes.twist = absinfo->value;
 +	} else {
-+		tablet->axes.angle = 0;
++		tablet->axes.twist = 0;
 +	}
 +}
 +
@@ -5762,7 +5762,7 @@ diff -Naur old/src/evdev-tablet.c new/src/evdev-tablet.c
  	tablet_update_slider(tablet, device);
  	tablet_update_tilt(tablet, device);
  	tablet_update_wheel(tablet, device);
-+	tablet_update_angle(tablet, device);
++	tablet_update_twist(tablet, device);
  	/* We must check ROTATION_Z after TILT_X/Y so that the tilt axes are
  	 * already normalized and set if we have the mouse/lens tool */
  	tablet_update_rotation(tablet, device);
@@ -5770,7 +5770,7 @@ diff -Naur old/src/evdev-tablet.c new/src/evdev-tablet.c
  	axes.wheel = tablet->axes.wheel;
  	axes.wheel_discrete = tablet->axes.wheel_discrete;
  	axes.rotation = tablet->axes.rotation;
-+	axes.angle = tablet->axes.angle;
++	axes.twist = tablet->axes.twist;
  
  	rc = true;
  
@@ -5778,8 +5778,8 @@ diff -Naur old/src/evdev-tablet.c new/src/evdev-tablet.c
  		copy_axis_cap(tablet, tool, LIBINPUT_TABLET_TOOL_AXIS_SLIDER);
  	if (axes & WACOM_AXIS_TYPE_PRESSURE)
  		copy_axis_cap(tablet, tool, LIBINPUT_TABLET_TOOL_AXIS_PRESSURE);
-+	if (axes & WACOM_AXIS_TYPE_ANGLE)
-+		copy_axis_cap(tablet, tool, LIBINPUT_TABLET_TOOL_AXIS_ANGLE);
++	if (axes & WACOM_AXIS_TYPE_TWIST)
++		copy_axis_cap(tablet, tool, LIBINPUT_TABLET_TOOL_AXIS_TWIST);
  
  	rc = 0;
  
@@ -5787,7 +5787,7 @@ diff -Naur old/src/evdev-tablet.c new/src/evdev-tablet.c
  		copy_axis_cap(tablet, tool, LIBINPUT_TABLET_TOOL_AXIS_TILT_X);
  		copy_axis_cap(tablet, tool, LIBINPUT_TABLET_TOOL_AXIS_TILT_Y);
  		copy_axis_cap(tablet, tool, LIBINPUT_TABLET_TOOL_AXIS_SLIDER);
-+		copy_axis_cap(tablet, tool, LIBINPUT_TABLET_TOOL_AXIS_ANGLE);
++		copy_axis_cap(tablet, tool, LIBINPUT_TABLET_TOOL_AXIS_TWIST);
  
  		/* Rotation is special, it can be either ABS_Z or
  		 * BTN_TOOL_MOUSE+ABS_TILT_X/Y. Aiptek tablets have
@@ -5858,15 +5858,6 @@ diff -Naur old/src/evdev-tablet.c new/src/evdev-tablet.c
  
  	if (tablet_reject_device(device))
  		return -1;
-@@ -2604,7 +2666,7 @@
- 	tablet_init_smoothing(device, tablet);
- 
- 	for (axis = LIBINPUT_TABLET_TOOL_AXIS_X;
--	     axis <= LIBINPUT_TABLET_TOOL_AXIS_MAX;
-+	     axis <= LIBINPUT_TABLET_TOOL_AXIS_ANGLE;
- 	     axis++) {
- 		if (tablet_device_has_axis(tablet, axis))
- 			set_bit(tablet->axis_caps, axis);
 diff -Naur old/src/evdev-tablet.h new/src/evdev-tablet.h
 --- old/src/evdev-tablet.h	2025-03-26 11:12:53.949121875 +0800
 +++ new/src/evdev-tablet.h	2025-03-26 11:16:26.434458838 +0800
@@ -5877,8 +5868,8 @@ diff -Naur old/src/evdev-tablet.h new/src/evdev-tablet.h
 +	case ABS_MT_TOOL_TYPE:
 +		axis = LIBINPUT_TABLET_TOOL_AXIS_TYPE;
 +		break;
-+	case ABS_MT_ANGLE:
-+		axis = LIBINPUT_TABLET_TOOL_AXIS_ANGLE;
++	case ABS_MT_TWIST:
++		axis = LIBINPUT_TABLET_TOOL_AXIS_TWIST;
 +		break;
  	default:
  		axis = LIBINPUT_TABLET_TOOL_AXIS_NONE;
@@ -5893,8 +5884,8 @@ diff -Naur old/src/evdev-tablet.h new/src/evdev-tablet.h
  	case LIBINPUT_TABLET_TOOL_AXIS_SIZE_MINOR:
  		evcode = ABS_MT_TOUCH_MINOR;
  		break;
-+	case LIBINPUT_TABLET_TOOL_AXIS_ANGLE:
-+		evcode = ABS_MT_ANGLE;
++	case LIBINPUT_TABLET_TOOL_AXIS_TWIST:
++		evcode = ABS_MT_TWIST;
 +		break;
  	default:
  		abort();
@@ -6593,11 +6584,11 @@ diff -Naur old/src/libinput-private.h new/src/libinput-private.h
 -	LIBINPUT_TABLET_TOOL_AXIS_SIZE_MINOR = 11,
 +	LIBINPUT_TABLET_TOOL_AXIS_TYPE = 11,
 +	LIBINPUT_TABLET_TOOL_AXIS_SIZE_MINOR = 12,
-+	LIBINPUT_TABLET_TOOL_AXIS_ANGLE = 13,
++	LIBINPUT_TABLET_TOOL_AXIS_TWIST = 13,
  };
  
 -#define LIBINPUT_TABLET_TOOL_AXIS_MAX LIBINPUT_TABLET_TOOL_AXIS_SIZE_MINOR
-+#define LIBINPUT_TABLET_TOOL_AXIS_MAX LIBINPUT_TABLET_TOOL_AXIS_ANGLE
++#define LIBINPUT_TABLET_TOOL_AXIS_MAX LIBINPUT_TABLET_TOOL_AXIS_TWIST
  
  struct tablet_axes {
  	struct device_coords point;
@@ -6605,7 +6596,7 @@ diff -Naur old/src/libinput-private.h new/src/libinput-private.h
  	double wheel;
  	int wheel_discrete;
  	struct phys_ellipsis size;
-+	int angle;
++	int twist;
  };
  
  enum pressure_heuristic_state {
@@ -7862,7 +7853,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  }
  
 +LIBINPUT_EXPORT int32_t
-+libinput_event_tablet_tool_get_angle(struct libinput_event_tablet_tool *event)
++libinput_event_tablet_tool_get_twist(struct libinput_event_tablet_tool *event)
 +{
 +    require_event_type(libinput_event_get_context(&event->base),
 +		event->base.type,
@@ -7872,7 +7863,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +		LIBINPUT_EVENT_TABLET_TOOL_BUTTON,
 +		LIBINPUT_EVENT_TABLET_TOOL_PROXIMITY);
 +
-+	return event->axes.angle;
++	return event->axes.twist;
 +}
 +
  LIBINPUT_EXPORT enum libinput_tablet_tool_type
@@ -9673,11 +9664,11 @@ diff -Naur old/src/libinput.h new/src/libinput.h
 + * Get the current side rotation angle of the stylus.
 + *
 + * @param tool The libinput tool
-+ * @return angle value of the stylus
++ * @return twist value of the stylus
 + *
 + */
 +int32_t
-+libinput_event_tablet_tool_get_angle(struct libinput_event_tablet_tool *tool);
++libinput_event_tablet_tool_get_twist(struct libinput_event_tablet_tool *tool);
 +
 +/**
   * @ingroup event_tablet
