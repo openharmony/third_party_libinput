@@ -6211,13 +6211,14 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  static const struct evdev_udev_tag_match evdev_udev_tag_matches[] = {
  	{"ID_INPUT",			EVDEV_UDEV_TAG_INPUT},
  	{"ID_INPUT_KEYBOARD",		EVDEV_UDEV_TAG_KEYBOARD},
-@@ -131,7 +111,12 @@
+@@ -131,7 +111,13 @@
  {
  	int key_count = 0;
  	assert(code >= 0 && code < KEY_CNT);
 -
-+	if (code == BTN_LEFT) {
++	if (code == BTN_LEFT || code == BTN_RIGHT) {
 +		if (device->key_count[code] == pressed) {
++			evdev_log_libinput_error(device, "A repeated key press occurred");
 +			return pressed;
 +		}
 +	}
@@ -6225,7 +6226,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  	if (pressed) {
  		key_count = ++device->key_count[code];
  	} else {
-@@ -204,8 +189,64 @@
+@@ -204,8 +190,64 @@
  			if (device->scroll.change_scroll_method)
  				device->scroll.change_scroll_method(device);
  		}
@@ -6290,7 +6291,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  }
  
  static void
-@@ -329,6 +370,36 @@
+@@ -329,6 +371,36 @@
  }
  
  void
@@ -6327,7 +6328,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  evdev_device_led_update(struct evdev_device *device, enum libinput_led leds)
  {
  	static const struct {
-@@ -369,6 +440,17 @@
+@@ -369,6 +441,17 @@
  }
  
  void
@@ -6345,7 +6346,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  evdev_transform_relative(struct evdev_device *device,
  			 struct device_coords *point)
  {
-@@ -384,7 +466,10 @@
+@@ -384,7 +467,10 @@
  static inline double
  scale_axis(const struct input_absinfo *absinfo, double val, double to_range)
  {
@@ -6357,7 +6358,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  }
  
  double
-@@ -1965,6 +2050,9 @@
+@@ -1965,6 +2051,9 @@
  	return true;
  }
  
@@ -6367,7 +6368,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  static struct evdev_dispatch *
  evdev_configure_device(struct evdev_device *device)
  {
-@@ -1974,11 +2062,17 @@
+@@ -1974,11 +2063,17 @@
  	struct evdev_dispatch *dispatch;
  
  	udev_tags = evdev_device_get_udev_tags(device, device->udev_device);
@@ -6385,7 +6386,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  		return NULL;
  	}
  
-@@ -2008,12 +2102,6 @@
+@@ -2008,12 +2103,6 @@
  		evdev_disable_accelerometer_axes(device);
  	}
  
@@ -6398,7 +6399,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  	if (evdev_reject_device(device)) {
  		evdev_log_info(device, "was rejected\n");
  		return NULL;
-@@ -2029,8 +2117,23 @@
+@@ -2029,8 +2118,23 @@
  			udev_tags &= ~EVDEV_UDEV_TAG_TOUCHSCREEN;
  	}
  
@@ -6422,7 +6423,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  		dispatch = evdev_totem_create(device);
  		device->seat_caps |= EVDEV_DEVICE_TABLET;
  		evdev_log_info(device, "device is a totem\n");
-@@ -2046,6 +2149,7 @@
+@@ -2046,6 +2150,7 @@
  
  	/* libwacom assigns tablet _and_ tablet_pad to the pad devices */
  	if (udev_tags & EVDEV_UDEV_TAG_TABLET_PAD) {
@@ -6430,7 +6431,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  		dispatch = evdev_tablet_pad_create(device);
  		device->seat_caps |= EVDEV_DEVICE_TABLET_PAD;
  		evdev_log_info(device, "device is a tablet pad\n");
-@@ -2054,6 +2158,7 @@
+@@ -2054,6 +2159,7 @@
  	}
  
  	if ((udev_tags & tablet_tags) == EVDEV_UDEV_TAG_TABLET) {
@@ -6438,7 +6439,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  		dispatch = evdev_tablet_create(device);
  		device->seat_caps |= EVDEV_DEVICE_TABLET;
  		evdev_log_info(device, "device is a tablet\n");
-@@ -2061,6 +2166,7 @@
+@@ -2061,6 +2167,7 @@
  	}
  
  	if (udev_tags & EVDEV_UDEV_TAG_TOUCHPAD) {
@@ -6446,7 +6447,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  		if (udev_tags & EVDEV_UDEV_TAG_TABLET)
  			evdev_tag_tablet_touchpad(device);
  		/* whether velocity should be averaged, false by default */
-@@ -2147,6 +2253,10 @@
+@@ -2147,6 +2254,10 @@
  		return NULL;
  	}
  
@@ -6457,7 +6458,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  	if (evdev_device_has_model_quirk(device, QUIRK_MODEL_INVERT_HORIZONTAL_SCROLLING)) {
  		device->scroll.invert_horizontal_scrolling = true;
  	}
-@@ -2518,6 +2628,18 @@
+@@ -2518,6 +2629,18 @@
  }
  
  unsigned int
@@ -6476,7 +6477,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  evdev_device_get_id_product(struct evdev_device *device)
  {
  	return libevdev_get_id_product(device->evdev);
-@@ -2535,6 +2657,33 @@
+@@ -2535,6 +2658,33 @@
  	return udev_device_ref(device->udev_device);
  }
  
@@ -6510,7 +6511,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  void
  evdev_device_set_default_calibration(struct evdev_device *device,
  				     const float calibration[6])
-@@ -2702,6 +2851,9 @@
+@@ -2702,6 +2852,9 @@
  		return !!(device->seat_caps & EVDEV_DEVICE_TABLET_PAD);
  	case LIBINPUT_DEVICE_CAP_SWITCH:
  		return !!(device->seat_caps & EVDEV_DEVICE_SWITCH);
@@ -6520,7 +6521,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  	default:
  		return false;
  	}
-@@ -2902,10 +3054,9 @@
+@@ -2902,10 +3055,9 @@
  	if (device->scroll.direction != 0) {
  		switch (source) {
  		case LIBINPUT_POINTER_AXIS_SOURCE_FINGER:
@@ -6534,7 +6535,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  			break;
  		case LIBINPUT_POINTER_AXIS_SOURCE_CONTINUOUS:
  			pointer_notify_axis_continuous(&device->base,
-@@ -3163,3 +3314,85 @@
+@@ -3163,3 +3315,85 @@
  #endif
  	return has_left_handed;
  }
