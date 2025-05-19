@@ -6218,7 +6218,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
 -
 +	if (code == BTN_LEFT || code == BTN_RIGHT) {
 +		if (device->key_count[code] == pressed) {
-+			evdev_log_libinput_error(device, "A repeated key press occurred");
++			evdev_log_libinput_error(device, "A repeated key press occurred.code:%d", code);
 +			return pressed;
 +		}
 +	}
