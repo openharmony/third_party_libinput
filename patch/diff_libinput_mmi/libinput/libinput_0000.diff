@@ -1543,7 +1543,7 @@ diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
 +	const uint16_t DAGGER_CLICK = 0x2f9;
 +	const uint16_t DAGGER_LONG_PRESS = 0x2fa;
 +	const uint16_t AOD_SLIDE = 0x2fb;
-+	const uint16_t KEY_DEV = 0x2fc;
++	const uint16_t KEY_DIV = 0x2fc;
 +	const uint16_t KEY_PEN_AIR_MOUSE = 0x2f0;
 +	const uint16_t KEY_PEN_LIGHT_PINCH = 0x2f1;
 +	const uint16_t KEY_PEN_AI = 0x2f2;
@@ -1564,7 +1564,7 @@ diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
 +		return KEY_TYPE_KEY;
 +	if (code == AOD_SLIDE)
 +		return KEY_TYPE_KEY;
-+	if (code == KEY_DEV)
++	if (code == KEY_DIV)
 +		return KEY_TYPE_KEY;
  	return KEY_TYPE_NONE;
  }
