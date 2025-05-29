@@ -10438,7 +10438,7 @@ diff -Naur old/src/path-seat.c new/src/path-seat.c
  
 diff -Naur old/src/quirks.c new/src/quirks.c
 --- old/src/quirks.c	2025-05-07 15:08:15.321722508 +0800
-+++ new/src/quirks.c	2025-05-13 21:38:14.796395680 +0800
++++ new/src/quirks.c	2025-05-29 21:01:20.973892657 +0800
 @@ -271,6 +271,7 @@
  	case QUIRK_MODEL_TRACKBALL:			return "ModelTrackball";
  	case QUIRK_MODEL_WACOM_TOUCHPAD:		return "ModelWacomTouchpad";
@@ -10460,7 +10460,15 @@ diff -Naur old/src/quirks.c new/src/quirks.c
  	default:
  		abort();
  	}
-@@ -859,6 +866,48 @@
+@@ -706,6 +713,7 @@
+ 	unsigned int v;
+ 	bool b;
+ 	double d;
++	int i;
+ 
+ 	if (streq(key, quirk_get_name(QUIRK_ATTR_SIZE_HINT))) {
+ 		p->id = QUIRK_ATTR_SIZE_HINT;
+@@ -859,6 +867,48 @@
  		p->type = PT_TUPLES;
  
  		rc = true;
@@ -10494,10 +10502,10 @@ diff -Naur old/src/quirks.c new/src/quirks.c
 +		rc = true;
 +	} else if (streq(key, quirk_get_name(QUIRK_ATTR_TOUCHPAD_HOLD_AND_MOTION_TIME_THRESHOLD))) {
 +		p->id = QUIRK_ATTR_TOUCHPAD_HOLD_AND_MOTION_TIME_THRESHOLD;
-+		if (!safe_atod(value, &d))
++		if (!safe_atoi(value, &i))
 +			goto out;
 +		p->type = PT_INT;
-+		p->value.d = d;
++		p->value.i = i;
 +		rc = true;
 +	} else if (streq(key, quirk_get_name(QUIRK_ATTR_TOUCHPAD_GESTURE_SWITCH_TIMEOUT))) {
 +		p->id = QUIRK_ATTR_TOUCHPAD_GESTURE_SWITCH_TIMEOUT;
