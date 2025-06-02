@@ -101,8 +101,9 @@ ohos_source_set("patch_gen_libinput-third-mmi") {
 
   deps = [ "//third_party/libinput/patch:apply_patch" ]
 
+  external_deps = [ "input:mmi_libudev" ]
+
   public_external_deps = [
-    "input:mmi_libudev",
     "libevdev:libevdev",
     "mtdev:libmtdev-third-mmi",
   ]
