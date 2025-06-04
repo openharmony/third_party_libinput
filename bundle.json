@@ -19,11 +19,13 @@
         "rom": "",
         "ram": "",
         "deps": {
-            "components": [],
-            "third_party": [
+            "components": [
               "libevdev",
-              "mtdev"
-            ]
+              "mtdev",
+              "hilog",
+              "input"
+            ],
+            "third_party": []
         },
         "build": {
             "sub_component": [],
