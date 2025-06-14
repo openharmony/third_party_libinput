@@ -4118,7 +4118,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  		/* Immediately switch to new mode to avoid initial latency */
  		} else if (!tp->gesture.started) {
  			tp->gesture.finger_count = active_touches;
-@@ -1446,16 +2367,34 @@
+@@ -1446,16 +2367,36 @@
  			 * NONE to re-evaluate leftmost and rightmost touches
  			 */
  			if (tp->gesture.state == GESTURE_STATE_UNKNOWN ||
@@ -4131,7 +4131,9 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  			}
  		/* Else debounce finger changes */
  		} else if (active_touches != tp->gesture.finger_count_pending) {
-+			if (tp->gesture.started && tp->gesture.finger_count == 2 && active_touches > 2) {
++			if (tp->gesture.started && tp->gesture.finger_count == 2 &&
++				(tp->gesture.state == GESTURE_STATE_SCROLL || tp->gesture.state == GESTURE_STATE_PINCH) &&
++				active_touches > 2) {
 +				return;
 +			}
  			tp->gesture.finger_count_pending = active_touches;
@@ -4155,7 +4157,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  		}
  	} else {
  		 tp->gesture.finger_count_pending = 0;
-@@ -1504,6 +2443,71 @@
+@@ -1504,6 +2445,71 @@
  	       LIBINPUT_CONFIG_HOLD_DISABLED;
  }
  
@@ -4227,7 +4229,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  void
  tp_init_gesture(struct tp_dispatch *tp)
  {
-@@ -1518,7 +2522,7 @@
+@@ -1518,7 +2524,7 @@
  	 * decides whether we detect pinch. semi-mt devices are too
  	 * unreliable to do pinch gestures. */
  	tp->gesture.enabled = tp_gesture_are_gestures_enabled(tp);
@@ -4236,7 +4238,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	tp->gesture.state = GESTURE_STATE_NONE;
  	tp->gesture.hold_enabled = tp_gesture_are_gestures_enabled(tp);
  
-@@ -1539,6 +2543,11 @@
+@@ -1539,6 +2545,11 @@
  			    tp_libinput_context(tp),
  			    timer_name,
  			    tp_gesture_hold_timeout, tp);
