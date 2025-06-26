@@ -1571,8 +1571,8 @@ diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
  
 diff -Naur old/src/evdev-joystick.c new/src/evdev-joystick.c
 --- old/src/evdev-joystick.c	1970-01-01 08:00:00.000000000 +0800
-+++ new/src/evdev-joystick.c	2025-04-25 14:14:42.250397571 +0800
-@@ -0,0 +1,590 @@
++++ new/src/evdev-joystick.c	2025-06-26 11:38:55.152608800 +0800
+@@ -0,0 +1,589 @@
 +/*
 + * Copyright (c) 2021-2022 Huawei Device Co., Ltd.
 + * Licensed under the Apache License, Version 2.0 (the "License");
@@ -2100,9 +2100,8 @@ diff -Naur old/src/evdev-joystick.c new/src/evdev-joystick.c
 +void print_libinput_event_joystick_axis(struct libinput_event_joystick_axis *p)
 +{
 +    printf("JOYSTICK:\n"
-+        "type: %d, device: %p, type: %d, time: 0x%x\n",
++        "type: %d, type: %d, time: 0x%x\n",
 +        p->base.type,
-+        p->base.device,
 +        p->type,
 +        p->time);
 +    printf_joystick_absinfo("abs_throttle", &p->abs_throttle);
