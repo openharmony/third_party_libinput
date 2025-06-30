@@ -6085,23 +6085,20 @@ diff -Naur old/src/evdev-tablet.c new/src/evdev-tablet.c
  
  		/* Rotation is special, it can be either ABS_Z or
  		 * BTN_TOOL_MOUSE+ABS_TILT_X/Y. Aiptek tablets have
-@@ -1107,9 +1133,15 @@
+@@ -1107,9 +1133,9 @@
  		tool->pressure.heuristic_state = PRESSURE_HEURISTIC_STATE_PROXIN1;
  	}
  
-+#ifdef OHOS_BUILD_ENABLE_PEN
+-	/* 5 and 1% of the pressure range */
+-	hi = axis_range_percentage(pressure, 5);
+-	lo = axis_range_percentage(pressure, 1);
 +	/* 1 and 0.125% of the pressure range */
 +	hi = axis_range_percentage(pressure, 1);
 +	lo = axis_range_percentage(pressure, 0.125);
-+#else
- 	/* 5 and 1% of the pressure range */
- 	hi = axis_range_percentage(pressure, 5);
- 	lo = axis_range_percentage(pressure, 1);
-+#endif // OHOS_BUILD_ENABLE_PEN
  
  	if (q && quirks_get_range(q, QUIRK_ATTR_PRESSURE_RANGE, &r)) {
  		if (r.lower >= r.upper) {
-@@ -1184,6 +1216,7 @@
+@@ -1184,6 +1210,7 @@
  			.serial = serial,
  			.tool_id = tool_id,
  			.refcount = 1,
@@ -6109,7 +6106,7 @@ diff -Naur old/src/evdev-tablet.c new/src/evdev-tablet.c
  		};
  
  		tool_set_pressure_thresholds(tablet, tool);
-@@ -2563,6 +2596,34 @@
+@@ -2563,6 +2590,34 @@
  	return true;
  }
  
@@ -6144,7 +6141,7 @@ diff -Naur old/src/evdev-tablet.c new/src/evdev-tablet.c
  static int
  tablet_init(struct tablet_dispatch *tablet,
  	    struct evdev_device *device)
-@@ -2577,6 +2638,7 @@
+@@ -2577,6 +2632,7 @@
  	tablet->status = TABLET_NONE;
  	tablet->current_tool.type = LIBINPUT_TOOL_NONE;
  	list_init(&tablet->tool_list);
