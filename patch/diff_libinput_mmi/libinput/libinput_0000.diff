@@ -7396,28 +7396,28 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +LIBINPUT_EXPORT struct libinput_event_pointer*
 +libinput_device_create_pointer_event(struct libinput_device* device, struct event_pointer eventPointer)
 +{
-+	if (device == NULL)
-+		return NULL;
++    if (device == NULL)
++        return NULL;
 +    struct libinput_event_pointer *pointer_event;
-+	pointer_event = zalloc(sizeof *pointer_event);
-+	*pointer_event = (struct libinput_event_pointer) {
-+		.base.device = event_touch->base.device,
-+		.base.type = eventPointer.event_type,
-+		.delta.x = eventPointer.delta_x,
-+		.delta.y = eventPointer.delta_y,
-+		.delta_raw.x = eventPointer.delta_raw_x,
-+		.delta_raw.y = eventPointer.delta_raw_y,
-+		.absolute.x = eventPointer.absolute_x,
-+		.absolute.y = eventPointer.absolute_y,
-+		.discrete.x = eventPointer.discrete_x,
-+		.discrete.y = eventPointer.discrete_y,
-+		.v120.x = eventPointer.v120_x,
-+		.v120.y = eventPointer.v120_y,
-+		.button = eventPointer.button,
-+		.seat_button_count = eventPointer.seat_button_count,
-+		.state = eventPointer.state,
-+		.source = eventPointer.source,
-+		.axes = eventPointer.axes,
++    pointer_event = zalloc(sizeof *pointer_event);
++    *pointer_event = (struct libinput_event_pointer) {
++        .base.device = device,
++        .base.type = eventPointer.event_type,
++        .delta.x = eventPointer.delta_x,
++        .delta.y = eventPointer.delta_y,
++        .delta_raw.x = eventPointer.delta_raw_x,
++        .delta_raw.y = eventPointer.delta_raw_y,
++        .absolute.x = eventPointer.absolute_x,
++        .absolute.y = eventPointer.absolute_y,
++        .discrete.x = eventPointer.discrete_x,
++        .discrete.y = eventPointer.discrete_y,
++        .v120.x = eventPointer.v120_x,
++        .v120.y = eventPointer.v120_y,
++        .button = eventPointer.button,
++        .seat_button_count = eventPointer.seat_button_count,
++        .state = eventPointer.state,
++        .source = eventPointer.source,
++        .axes = eventPointer.axes,
 +	};
 +    return pointer_event;
 +}
