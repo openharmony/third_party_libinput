@@ -6198,8 +6198,8 @@ diff -Naur old/src/evdev-tablet.h new/src/evdev-tablet.h
  		abort();
  	}
 diff -Naur old/src/evdev.c new/src/evdev.c
---- old/src/evdev.c	2025-07-01 16:56:48.837091242 +0800
-+++ new/src/evdev.c	2025-07-01 16:56:48.909091243 +0800
+--- old/src/evdev.c	2025-05-07 15:08:15.301721668 +0800
++++ new/src/evdev.c	2025-07-17 15:16:27.359591002 +0800
 @@ -52,26 +52,6 @@
  #define DEFAULT_WHEEL_CLICK_ANGLE 15
  #define DEFAULT_BUTTON_SCROLL_TIMEOUT ms2us(200)
@@ -6474,7 +6474,59 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  	if (evdev_device_has_model_quirk(device, QUIRK_MODEL_INVERT_HORIZONTAL_SCROLLING)) {
  		device->scroll.invert_horizontal_scrolling = true;
  	}
-@@ -2518,6 +2629,18 @@
+@@ -2158,24 +2269,33 @@
+ evdev_notify_added_device(struct evdev_device *device)
+ {
+ 	struct libinput_device *dev;
+-
+-	list_for_each(dev, &device->base.seat->devices_list, link) {
+-		struct evdev_device *d = evdev_device(dev);
+-		if (dev == &device->base)
+-			continue;
+-
+-		/* Notify existing device d about addition of device */
+-		if (d->dispatch->interface->device_added)
+-			d->dispatch->interface->device_added(d, device);
+-
+-		/* Notify new device about existing device d */
+-		if (device->dispatch->interface->device_added)
+-			device->dispatch->interface->device_added(device, d);
+-
+-		/* Notify new device if existing device d is suspended */
+-		if (d->is_suspended &&
+-		    device->dispatch->interface->device_suspended)
+-			device->dispatch->interface->device_suspended(device, d);
++	struct libinput_seat *seat;
++	if (device == NULL) {
++		return;
++	}
++	if (device->base.seat != NULL && device->base.seat->libinput != NULL) {
++		list_for_each(seat, &device->base.seat->libinput->seat_list, link) {
++			if (seat != NULL) {
++				list_for_each(dev, &seat->devices_list, link) {
++					struct evdev_device *d = evdev_device(dev);
++					if (dev == &device->base)
++						continue;
++	
++					/* Notify existing device d about addition of device */
++					if (d->dispatch->interface->device_added)
++						d->dispatch->interface->device_added(d, device);
++	
++					/* Notify new device about existing device d */
++					if (device->dispatch->interface->device_added)
++						device->dispatch->interface->device_added(device, d);
++	
++					/* Notify new device if existing device d is suspended */
++					if (d->is_suspended &&
++						device->dispatch->interface->device_suspended)
++						device->dispatch->interface->device_suspended(device, d);
++				}
++			}
++		}
+ 	}
+ 
+ 	notify_added_device(&device->base);
+@@ -2518,6 +2638,18 @@
  }
  
  unsigned int
@@ -6493,7 +6545,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  evdev_device_get_id_product(struct evdev_device *device)
  {
  	return libevdev_get_id_product(device->evdev);
-@@ -2535,6 +2658,33 @@
+@@ -2535,6 +2667,33 @@
  	return udev_device_ref(device->udev_device);
  }
  
@@ -6527,7 +6579,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  void
  evdev_device_set_default_calibration(struct evdev_device *device,
  				     const float calibration[6])
-@@ -2702,6 +2852,9 @@
+@@ -2702,6 +2861,9 @@
  		return !!(device->seat_caps & EVDEV_DEVICE_TABLET_PAD);
  	case LIBINPUT_DEVICE_CAP_SWITCH:
  		return !!(device->seat_caps & EVDEV_DEVICE_SWITCH);
@@ -6537,7 +6589,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  	default:
  		return false;
  	}
-@@ -2902,10 +3055,9 @@
+@@ -2902,10 +3064,9 @@
  	if (device->scroll.direction != 0) {
  		switch (source) {
  		case LIBINPUT_POINTER_AXIS_SOURCE_FINGER:
@@ -6551,7 +6603,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  			break;
  		case LIBINPUT_POINTER_AXIS_SOURCE_CONTINUOUS:
  			pointer_notify_axis_continuous(&device->base,
-@@ -3163,3 +3315,85 @@
+@@ -3163,3 +3324,85 @@
  #endif
  	return has_left_handed;
  }
