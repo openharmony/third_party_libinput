@@ -1,4 +1,4 @@
-# Copyright (c) 2021-2024 Huawei Device Co., Ltd.
+# Copyright (c) 2021-2025 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -48,8 +48,8 @@ config("libinput-third_public_config") {
 }
 
 ohos_source_set("patch_gen_libinput-third-mmi") {
-  part_name = "input"
-  subsystem_name = "multimodalinput"
+  part_name = "libinput"
+  subsystem_name = "thirdparty"
   sources = [
     root_out_dir + "/diff_libinput_mmi/src/evdev-debounce.c",
     root_out_dir + "/diff_libinput_mmi/src/evdev-fallback.c",
@@ -99,7 +99,7 @@ ohos_source_set("patch_gen_libinput-third-mmi") {
 
   public_configs = [ ":libinput-third_public_config" ]
 
-  deps = [ "//third_party/libinput/patch:apply_patch" ]
+  deps = [ "patch:apply_patch" ]
 
   external_deps = [ "input:mmi_libudev" ]
 
@@ -130,9 +130,9 @@ ohos_shared_library("libinput-third-mmi") {
   ]
 
   external_deps = [ "hilog:libhilog" ]
-  license_file = "//third_party/libinput/COPYING"
-  part_name = "input"
-  subsystem_name = "multimodalinput"
+  license_file = "${third_libinput_root_path}/COPYING"
+  part_name = "libinput"
+  subsystem_name = "thirdparty"
 }
 
 ohos_source_set("patch_gen_libinput-debug") {
