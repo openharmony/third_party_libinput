@@ -6198,8 +6198,8 @@ diff -Naur old/src/evdev-tablet.h new/src/evdev-tablet.h
  		abort();
  	}
 diff -Naur old/src/evdev.c new/src/evdev.c
---- old/src/evdev.c	2025-05-07 15:08:15.301721668 +0800
-+++ new/src/evdev.c	2025-07-17 15:16:27.359591002 +0800
+--- old/src/evdev.c	2025-07-17 16:55:45.669787126 +0800
++++ new/src/evdev.c	2025-08-01 17:38:14.550177992 +0800
 @@ -52,26 +52,6 @@
  #define DEFAULT_WHEEL_CLICK_ANGLE 15
  #define DEFAULT_BUTTON_SCROLL_TIMEOUT ms2us(200)
@@ -6251,7 +6251,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
 +			button, state, down_count);
  	}
 +}
-+
+ 
 +static void
 +evdev_pointer_post_button_touchpad(struct evdev_device *device,
 +			  uint64_t time,
@@ -6288,7 +6288,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
 +	int down_count;
 +
 +	down_count = evdev_update_key_down_count(device, button, state);
- 
++
 +	if ((state == LIBINPUT_BUTTON_STATE_PRESSED && down_count == 1) ||
 +	    (state == LIBINPUT_BUTTON_STATE_RELEASED && down_count == 0)) {
 +		pointer_notify_tap(&device->base, time, button, state);
@@ -6603,7 +6603,46 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  			break;
  		case LIBINPUT_POINTER_AXIS_SOURCE_CONTINUOUS:
  			pointer_notify_axis_continuous(&device->base,
-@@ -3163,3 +3324,85 @@
+@@ -3063,21 +3224,29 @@
+ evdev_device_remove(struct evdev_device *device)
+ {
+ 	struct libinput_device *dev;
+-
++	struct libinput_seat *seat;
++	if (device == NULL) {
++		return;
++	}
+ 	evdev_log_info(device, "device removed\n");
+ 
+ 	libinput_timer_cancel(&device->scroll.timer);
+ 	libinput_timer_cancel(&device->middlebutton.timer);
+ 
+-	list_for_each(dev, &device->base.seat->devices_list, link) {
+-		struct evdev_device *d = evdev_device(dev);
+-		if (dev == &device->base)
+-			continue;
+-
+-		if (d->dispatch->interface->device_removed)
+-			d->dispatch->interface->device_removed(d, device);
++	if (device->base.seat != NULL && device->base.seat->libinput != NULL) {
++		list_for_each(seat, &device->base.seat->libinput->seat_list, link) {
++			if (seat != NULL) {
++				list_for_each(dev, &seat->devices_list, link) {
++					struct evdev_device *d = evdev_device(dev);
++					if (dev == &device->base)
++						continue;
++
++					if (d->dispatch->interface->device_removed)
++						d->dispatch->interface->device_removed(d, device);
++				}
++			}
++		}
+ 	}
+-
+ 	evdev_device_suspend(device);
+ 
+ 	if (device->dispatch->interface->remove)
+@@ -3163,3 +3332,85 @@
  #endif
  	return has_left_handed;
  }
