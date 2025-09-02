@@ -4700,13 +4700,13 @@ diff -Naur old/src/evdev-mt-touchpad-tap.c new/src/evdev-mt-touchpad-tap.c
 +}
 +
 +void
-+tp_tap_action(struct tp_dispatch *tp,
++tp_tap_active(struct tp_dispatch *tp,
 +		    struct tp_touch *t,
 +		    uint64_t time)
 +{
 +	if (tp != NULL && tp->device != NULL) {
 +		struct libinput_device *base = &tp->device->base;
-+		touchpad_notify_touch_action(base, time);
++		touchpad_notify_touch_active(base, time);
 +	}
 +}
 \ No newline at end of file
@@ -4942,17 +4942,17 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
 +	};
 +}
 +
-+void tp_ext_on_action(struct tp_dispatch* dispatch, uint64_t time)
++void tp_ext_on_active(struct tp_dispatch* dispatch, uint64_t time)
 +{
-+	if (!dispatch->has_action) {
++	if (!dispatch->has_touchpad_active) {
 +		return;
 +	}
-+	struct tp_touch *t = tp_get_touch(dispatch, dispatch->action_slot);
++	struct tp_touch *t = tp_get_touch(dispatch, dispatch->active_slot);
 +	if (t->is_tool_palm) {
 +		return;
 +	}
-+	tp_tap_action(dispatch, t, time);
-+	dispatch->has_action = false;
++	tp_tap_active(dispatch, t, time);
++	dispatch->has_touchpad_active = false;
 +}
 +
  static void
@@ -4984,15 +4984,15 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  	case ABS_MT_TRACKING_ID:
  		if (e->value != -1) {
 +			if (tp->nactive_slots == 0) {
-+				tp->action_slot = tp->slot;
-+				tp->has_action = true;
++				tp->active_slot = tp->slot;
++				tp->has_touchpad_active = true;
 +			}
 +			tp_ext_before_new_touch(tp, time);
  			tp->nactive_slots += 1;
  			tp_new_touch(tp, t, time);
  		} else {
  			assert(tp->nactive_slots >= 1);
-+			tp->has_action = false;
++			tp->has_touchpad_active = false;
 +			tp_ext_before_delete_touch(tp, time);
  			tp->nactive_slots -= 1;
  			tp_end_sequence(tp, t, time);
@@ -5214,7 +5214,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
  		tp_process_msc(tp, e, time);
  		break;
  	case EV_SYN:
-+		tp_ext_on_action(tp, time);
++		tp_ext_on_active(tp, time);
 +		tp_ext_on_sync(tp, time);
  		tp_handle_state(tp, time);
  #if 0
@@ -5663,8 +5663,8 @@ diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
 +		double gain;
 +	} axis_speed_gain;
 +
-+	unsigned int action_slot; /* The first active finger to touch the trackpad */
-+	bool has_action;
++	unsigned int active_slot; /* The first active finger to touch the trackpad */
++	bool has_touchpad_active;
  };
  
  static inline struct tp_dispatch*
@@ -5717,7 +5717,7 @@ diff -Naur old/src/evdev-mt-touchpad.h new/src/evdev-mt-touchpad.h
 +		    uint64_t time);
 +
 +void
-+tp_tap_action(struct tp_dispatch *tp,
++tp_tap_active(struct tp_dispatch *tp,
 +		    struct tp_touch *t,
 +		    uint64_t time);
 +
@@ -7201,7 +7201,7 @@ diff -Naur old/src/libinput-private.h new/src/libinput-private.h
 +			  struct touch_axis axis);
 +
 +void
-+touchpad_notify_touch_action(struct libinput_device *device,
++touchpad_notify_touch_active(struct libinput_device *device,
 +		      uint64_t time);
 +
 +void
@@ -8708,7 +8708,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +}
 +
 +void
-+touchpad_notify_touch_action(struct libinput_device *device,
++touchpad_notify_touch_active(struct libinput_device *device,
 +		      uint64_t time)
 +{
 +	struct libinput_event_touch *touch_event;
