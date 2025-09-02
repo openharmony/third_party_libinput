@@ -139,7 +139,7 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
 +	LIBINPUT_EVENT_TOUCHPAD_UP,
 +	LIBINPUT_EVENT_TOUCHPAD_MOTION,
 +
-+	LIBINPUT_EVENT_TOUCHPAD_ACTION = 580,
++	LIBINPUT_EVENT_TOUCHPAD_ACTIVE = 580,
 +
  	/**
  	 * One or more axes have changed state on a device with the @ref
@@ -7436,7 +7436,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +        CASE_RETURN_STRING(LIBINPUT_EVENT_TOUCHPAD_DOWN);
 +        CASE_RETURN_STRING(LIBINPUT_EVENT_TOUCHPAD_UP);
 +        CASE_RETURN_STRING(LIBINPUT_EVENT_TOUCHPAD_MOTION);	
-+	CASE_RETURN_STRING(LIBINPUT_EVENT_TOUCHPAD_ACTION);
++	CASE_RETURN_STRING(LIBINPUT_EVENT_TOUCHPAD_ACTIVE);
  	CASE_RETURN_STRING(LIBINPUT_EVENT_TABLET_TOOL_AXIS);
  	CASE_RETURN_STRING(LIBINPUT_EVENT_TABLET_TOOL_PROXIMITY);
  	CASE_RETURN_STRING(LIBINPUT_EVENT_TABLET_TOOL_TIP);
@@ -7684,7 +7684,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +			   LIBINPUT_EVENT_TOUCHPAD_DOWN,
 +			   LIBINPUT_EVENT_TOUCHPAD_UP,
 +			   LIBINPUT_EVENT_TOUCHPAD_MOTION,
-+			   LIBINPUT_EVENT_TOUCHPAD_ACTION);
++			   LIBINPUT_EVENT_TOUCHPAD_ACTIVE);
 +	return (struct libinput_event_touch *) event;
 +}
 +
@@ -8042,7 +8042,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +			   LIBINPUT_EVENT_TOUCHPAD_DOWN,
 +			   LIBINPUT_EVENT_TOUCHPAD_UP,
 +			   LIBINPUT_EVENT_TOUCHPAD_MOTION,
-+			   LIBINPUT_EVENT_TOUCHPAD_ACTION);
++			   LIBINPUT_EVENT_TOUCHPAD_ACTIVE);
 +
 +	return us2ms(event->time);
 +}
@@ -8056,7 +8056,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +			   LIBINPUT_EVENT_TOUCHPAD_DOWN,
 +			   LIBINPUT_EVENT_TOUCHPAD_UP,
 +			   LIBINPUT_EVENT_TOUCHPAD_MOTION,
-+			   LIBINPUT_EVENT_TOUCHPAD_ACTION);
++			   LIBINPUT_EVENT_TOUCHPAD_ACTIVE);
 +
 +	return event->time;
 +}
@@ -8721,7 +8721,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +	};
 +
 +	post_device_event(device, time,
-+			  LIBINPUT_EVENT_TOUCHPAD_ACTION,
++			  LIBINPUT_EVENT_TOUCHPAD_ACTIVE,
 +			  &touch_event->base);
 +}
 +
@@ -9701,7 +9701,7 @@ diff -Naur old/src/libinput.h new/src/libinput.h
 +	LIBINPUT_EVENT_TOUCHPAD_UP,
 +	LIBINPUT_EVENT_TOUCHPAD_MOTION,
 +
-+	LIBINPUT_EVENT_TOUCHPAD_ACTION = 580,
++	LIBINPUT_EVENT_TOUCHPAD_ACTIVE = 580,
 +
  	/**
  	 * One or more axes have changed state on a device with the @ref
