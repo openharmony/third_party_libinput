@@ -3098,7 +3098,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
 +	quirks_unref(q);
 +	uint64_t timePeriod = time - tp->tap.saved_one_finger_touch_time;
 +	struct tp_touch *first = tp->gesture.touches[0];
-+	if (first == NULL) {
++	if (first == NULL || first->has_ended) {
 +		return false;
 +	}
 +	struct phys_coords first_moved = tp_gesture_mm_moved(tp, first);
