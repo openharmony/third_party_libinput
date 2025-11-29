@@ -3363,6 +3363,13 @@ libinput_device_switch_has_switch(struct libinput_device *device,
 }
 
 LIBINPUT_EXPORT int
+libinput_device_get_switch_state(struct libinput_device *device,
+				  enum libinput_switch sw)
+{
+	return evdev_device_switch_get_state((struct evdev_device *)device, sw);
+}
+
+LIBINPUT_EXPORT int
 libinput_device_tablet_pad_has_key(struct libinput_device *device, uint32_t code)
 {
 	return evdev_device_tablet_pad_has_key((struct evdev_device *)device,
