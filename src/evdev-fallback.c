@@ -73,7 +73,7 @@ fallback_notify_physical_button(struct fallback_dispatch *dispatch,
 
 static enum libinput_switch_state
 fallback_interface_get_switch_state(struct evdev_dispatch *evdev_dispatch,
-				    enum libinput_switch sw)	
+				    enum libinput_switch sw)
 {
 	struct fallback_dispatch *dispatch = fallback_dispatch(evdev_dispatch);
 
