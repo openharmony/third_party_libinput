@@ -71,33 +71,6 @@ fallback_notify_physical_button(struct fallback_dispatch *dispatch,
 	evdev_pointer_notify_physical_button(device, time, button, state);
 }
 
-static enum libinput_switch_state
-fallback_interface_get_switch_state(struct evdev_dispatch *evdev_dispatch,
-				    enum libinput_switch sw)
-{
-	struct fallback_dispatch *dispatch = fallback_dispatch(evdev_dispatch);
-	enum libinput_switch_state switchState = LIBINPUT_SWITCH_STATE_OFF;
-	switch (sw) {
-	case LIBINPUT_SWITCH_TABLET_MODE: {
-		switchState = dispatch->tablet_mode.sw.state ?
-			LIBINPUT_SWITCH_STATE_ON :
-			LIBINPUT_SWITCH_STATE_OFF;
-		break;
-	}
-	case LIBINPUT_SWITCH_LID: {
-		switchState = dispatch->lid.is_closed ?
-			LIBINPUT_SWITCH_STATE_ON :
-			LIBINPUT_SWITCH_STATE_OFF;
-		break;
-	}
-	default:
-		/* Internal function only, so we can abort here */
-		abort();
-	}
-
-	return switchState;
-}
-
 static inline bool
 post_button_scroll(struct evdev_device *device,
 		   struct device_float_coords raw,
