@@ -39,6 +39,8 @@
             libinput_set_touch_event_type*;
 		    libinput_event_vtrackpad_get_dx_unaccelerated*;
             libinput_event_vtrackpad_get_dy_unaccelerated*;
+            libinput_device_switch_has_switch*;
+            libinput_device_get_switch_state*;
         };
     local:
         *;

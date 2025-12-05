@@ -878,7 +878,31 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
   * @ingroup device
   *
   * Check if a @ref LIBINPUT_DEVICE_CAP_SWITCH device has a switch of the
-@@ -5722,6 +6439,9 @@
+@@ -4363,6 +5080,23 @@
+ /**
+  * @ingroup device
+  *
++ * Check if a @ref LIBINPUT_DEVICE_CAP_SWITCH device has a switch of the
++ * given type.
++ *
++ * @param device A current input device
++ * @param sw Switch to check for
++ *
++ * @return switch type state, 0 means open, 1 means close
++ *
++ * @since 1.9
++ */
++int
++libinput_device_get_switch_state(struct libinput_device *device,
++				  enum libinput_switch sw);
++
++/**
++ * @ingroup device
++ *
+  * Return the number of buttons on a device with the
+  * @ref LIBINPUT_DEVICE_CAP_TABLET_PAD capability.
+  * Buttons on a pad device are numbered sequentially, see the
+@@ -5722,6 +6456,9 @@
  enum libinput_config_click_method
  libinput_device_config_click_get_default_method(struct libinput_device *device);
  
@@ -888,7 +912,7 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
  /**
   * @ingroup config
   */
-@@ -6398,7 +7118,168 @@
+@@ -6398,7 +7135,168 @@
  unsigned int
  libinput_device_config_rotation_get_default_angle(struct libinput_device *device);
  
@@ -1202,7 +1226,39 @@ diff -Naur old/include/linux/linux/input-event-codes.h new/include/linux/linux/i
 diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
 --- old/src/evdev-fallback.c	2025-07-01 16:56:48.833091242 +0800
 +++ new/src/evdev-fallback.c	2025-07-01 16:56:48.905091243 +0800
-@@ -229,8 +229,11 @@
+@@ -76,18 +76,26 @@
+ 				    enum libinput_switch sw)
+ {
+ 	struct fallback_dispatch *dispatch = fallback_dispatch(evdev_dispatch);
+-
++	enum libinput_switch_state switchState = LIBINPUT_SWITCH_STATE_OFF;
+ 	switch (sw) {
+-	case LIBINPUT_SWITCH_TABLET_MODE:
++	case LIBINPUT_SWITCH_TABLET_MODE: {
++		switchState = dispatch->tablet_mode.sw.state ?
++			LIBINPUT_SWITCH_STATE_ON :
++			LIBINPUT_SWITCH_STATE_OFF;
++		break;
++	}
++	case LIBINPUT_SWITCH_LID: {
++		switchState = dispatch->lid.is_closed ?
++			LIBINPUT_SWITCH_STATE_ON :
++			LIBINPUT_SWITCH_STATE_OFF;
+ 		break;
++	}
+ 	default:
+ 		/* Internal function only, so we can abort here */
+ 		abort();
+ 	}
+ 
+-	return dispatch->tablet_mode.sw.state ?
+-			LIBINPUT_SWITCH_STATE_ON :
+-			LIBINPUT_SWITCH_STATE_OFF;
++	return switchState;
+ }
+ 
+ static inline bool
+@@ -229,8 +237,11 @@
  	struct libinput_device *base = &device->base;
  	struct libinput_seat *seat = base->seat;
  	struct device_coords point;
@@ -1214,7 +1270,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  
  	if (!(device->seat_caps & EVDEV_DEVICE_TOUCH))
  		return false;
-@@ -253,8 +256,12 @@
+@@ -253,8 +264,12 @@
  	slot->hysteresis_center = point;
  	evdev_transform_absolute(device, &point);
  
@@ -1229,7 +1285,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  
  	return true;
  }
-@@ -267,8 +274,11 @@
+@@ -267,8 +282,11 @@
  {
  	struct libinput_device *base = &device->base;
  	struct device_coords point;
@@ -1241,7 +1297,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  
  	if (!(device->seat_caps & EVDEV_DEVICE_TOUCH))
  		return false;
-@@ -276,6 +286,7 @@
+@@ -276,6 +294,7 @@
  	slot = &dispatch->mt.slots[slot_idx];
  	seat_slot = slot->seat_slot;
  	point = slot->point;
@@ -1249,7 +1305,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  
  	if (seat_slot == -1)
  		return false;
-@@ -284,8 +295,12 @@
+@@ -284,8 +303,12 @@
  		return false;
  
  	evdev_transform_absolute(device, &point);
@@ -1264,7 +1320,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  
  	return true;
  }
-@@ -300,6 +315,7 @@
+@@ -300,6 +323,7 @@
  	struct libinput_seat *seat = base->seat;
  	struct mt_slot *slot;
  	int seat_slot;
@@ -1272,7 +1328,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  
  	if (!(device->seat_caps & EVDEV_DEVICE_TOUCH))
  		return false;
-@@ -313,7 +329,9 @@
+@@ -313,7 +337,9 @@
  
  	seat->slot_map &= ~bit(seat_slot);
  
@@ -1283,7 +1339,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  
  	return true;
  }
-@@ -354,7 +372,12 @@
+@@ -354,7 +380,12 @@
  	struct libinput_device *base = &device->base;
  	struct libinput_seat *seat = base->seat;
  	struct device_coords point;
@@ -1296,7 +1352,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  
  	if (!(device->seat_caps & EVDEV_DEVICE_TOUCH))
  		return false;
-@@ -376,7 +399,9 @@
+@@ -376,7 +407,9 @@
  	point = dispatch->abs.point;
  	evdev_transform_absolute(device, &point);
  
@@ -1307,7 +1363,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  
  	return true;
  }
-@@ -388,7 +413,12 @@
+@@ -388,7 +421,12 @@
  {
  	struct libinput_device *base = &device->base;
  	struct device_coords point;
@@ -1320,7 +1376,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  
  	point = dispatch->abs.point;
  	evdev_transform_absolute(device, &point);
-@@ -398,11 +428,22 @@
+@@ -398,11 +436,22 @@
  	if (seat_slot == -1)
  		return false;
  
@@ -1344,7 +1400,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  static bool
  fallback_flush_st_up(struct fallback_dispatch *dispatch,
  		     struct evdev_device *device,
-@@ -411,6 +452,7 @@
+@@ -411,6 +460,7 @@
  	struct libinput_device *base = &device->base;
  	struct libinput_seat *seat = base->seat;
  	int seat_slot;
@@ -1352,7 +1408,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  
  	if (!(device->seat_caps & EVDEV_DEVICE_TOUCH))
  		return false;
-@@ -423,7 +465,9 @@
+@@ -423,7 +473,9 @@
  
  	seat->slot_map &= ~bit(seat_slot);
  
@@ -1363,7 +1419,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  
  	return true;
  }
-@@ -469,6 +513,21 @@
+@@ -469,6 +521,21 @@
  		     struct input_event *e, uint64_t time)
  {
  	enum key_type type;
@@ -1385,7 +1441,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  
  	/* ignore kernel key repeat */
  	if (e->value == 2)
-@@ -528,6 +587,14 @@
+@@ -528,6 +595,14 @@
  {
  	struct mt_slot *slot = &dispatch->mt.slots[dispatch->mt.slot];
  
@@ -1400,7 +1456,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  	if (e->code == ABS_MT_SLOT) {
  		if ((size_t)e->value >= dispatch->mt.slots_len) {
  			evdev_log_bug_libinput(device,
-@@ -541,6 +608,16 @@
+@@ -541,6 +616,16 @@
  	}
  
  	switch (e->code) {
@@ -1417,13 +1473,13 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  	case ABS_MT_TRACKING_ID:
  		if (e->value >= 0) {
  			dispatch->pending_event |= EVDEV_ABSOLUTE_MT;
-@@ -598,8 +675,49 @@
+@@ -598,8 +683,49 @@
  			break;
  		}
  		dispatch->pending_event |= EVDEV_ABSOLUTE_MT;
 +		slot->tool_type = e->value;
- 		slot->dirty = true;
- 		break;
++		slot->dirty = true;
++		break;
 +	case ABS_MT_PRESSURE:
 +        slot->pressure = e->value;
 +		dispatch->pending_event |= EVDEV_ABSOLUTE_MT;
@@ -1457,8 +1513,8 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
 +	case ABS_MT_TOOL_Y:
 +		slot->tool_rect.y = e->value;
 +		dispatch->pending_event |= EVDEV_ABSOLUTE_MT;
-+		slot->dirty = true;
-+		break;
+ 		slot->dirty = true;
+ 		break;
 +  case ABS_MT_ORIENTATION:
 +    slot->extraData.orientation = e->value;
 +    dispatch->pending_event |= EVDEV_ABSOLUTE_MT;
@@ -1467,7 +1523,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  	}
  }
  
-@@ -608,6 +726,11 @@
+@@ -608,6 +734,11 @@
  				 struct evdev_device *device,
  				 struct input_event *e)
  {
@@ -1479,7 +1535,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  	switch (e->code) {
  	case ABS_X:
  		evdev_device_check_abs_axis_range(device, e->code, e->value);
-@@ -619,6 +742,10 @@
+@@ -619,6 +750,10 @@
  		dispatch->abs.point.y = e->value;
  		dispatch->pending_event |= EVDEV_ABSOLUTE_MOTION;
  		break;
@@ -1490,7 +1546,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  	}
  }
  
-@@ -920,6 +1047,10 @@
+@@ -920,6 +1055,10 @@
  			fallback_flush_absolute_motion(dispatch,
  						       device,
  						       time);
@@ -1501,7 +1557,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  		}
  	}
  
-@@ -1556,6 +1687,8 @@
+@@ -1556,6 +1695,8 @@
  
  	for (slot = 0; slot < num_slots; ++slot) {
  		slots[slot].seat_slot = -1;
@@ -1510,7 +1566,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  
  		if (evdev_need_mtdev(device))
  			continue;
-@@ -1718,3 +1851,11 @@
+@@ -1718,3 +1859,11 @@
  
  	return &dispatch->base;
  }
@@ -9434,7 +9490,21 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_device_switch_has_switch(struct libinput_device *device,
  				  enum libinput_switch sw)
  {
-@@ -3537,7 +4904,8 @@
+@@ -3363,6 +4730,13 @@
+ }
+ 
+ LIBINPUT_EXPORT int
++libinput_device_get_switch_state(struct libinput_device *device,
++				  enum libinput_switch sw)
++{
++	return evdev_device_switch_get_state((struct evdev_device *)device, sw);
++}
++
++LIBINPUT_EXPORT int
+ libinput_device_tablet_pad_has_key(struct libinput_device *device, uint32_t code)
+ {
+ 	return evdev_device_tablet_pad_has_key((struct evdev_device *)device,
+@@ -3537,7 +4911,8 @@
  			   LIBINPUT_EVENT_POINTER_SCROLL_WHEEL,
  			   LIBINPUT_EVENT_POINTER_SCROLL_FINGER,
  			   LIBINPUT_EVENT_POINTER_SCROLL_CONTINUOUS,
@@ -9444,7 +9514,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  
  	return &event->base;
  }
-@@ -3558,6 +4926,19 @@
+@@ -3558,6 +4933,19 @@
  }
  
  LIBINPUT_EXPORT struct libinput_event *
@@ -9464,7 +9534,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_event_gesture_get_base_event(struct libinput_event_gesture *event)
  {
  	require_event_type(libinput_event_get_context(&event->base),
-@@ -4764,3 +6145,301 @@
+@@ -4764,3 +6152,301 @@
  	}
  }
  #endif
@@ -10633,7 +10703,31 @@ diff -Naur old/src/libinput.h new/src/libinput.h
   * @ingroup device
   *
   * Check if a @ref LIBINPUT_DEVICE_CAP_SWITCH device has a switch of the
-@@ -5722,6 +6439,9 @@
+@@ -4363,6 +5080,23 @@
+ /**
+  * @ingroup device
+  *
++ * Check if a @ref LIBINPUT_DEVICE_CAP_SWITCH device has a switch of the
++ * given type.
++ *
++ * @param device A current input device
++ * @param sw Switch to check for
++ *
++ * @return switch type state, 0 means open, 1 means close
++ *
++ * @since 1.9
++ */
++int
++libinput_device_get_switch_state(struct libinput_device *device,
++				  enum libinput_switch sw);
++
++/**
++ * @ingroup device
++ *
+  * Return the number of buttons on a device with the
+  * @ref LIBINPUT_DEVICE_CAP_TABLET_PAD capability.
+  * Buttons on a pad device are numbered sequentially, see the
+@@ -5722,6 +6456,9 @@
  enum libinput_config_click_method
  libinput_device_config_click_get_default_method(struct libinput_device *device);
  
@@ -10643,7 +10737,7 @@ diff -Naur old/src/libinput.h new/src/libinput.h
  /**
   * @ingroup config
   */
-@@ -6398,6 +7118,166 @@
+@@ -6398,6 +7135,166 @@
  unsigned int
  libinput_device_config_rotation_get_default_angle(struct libinput_device *device);
  
