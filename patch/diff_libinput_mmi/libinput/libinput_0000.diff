@@ -1579,8 +1579,8 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
 +	return hw_is_key_down(dispatch, btnToolType);
 +}
 diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
---- old/src/evdev-fallback.h	2025-07-01 16:56:48.833091242 +0800
-+++ new/src/evdev-fallback.h	2025-07-01 16:56:48.905091243 +0800
+--- old/src/evdev-fallback.h	2026-01-09 14:20:22.394114100 +0800
++++ new/src/evdev-fallback.h	2026-01-09 14:22:42.741541100 +0800
 @@ -75,11 +75,16 @@
  
  struct mt_slot {
@@ -1606,7 +1606,7 @@ diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
  	} abs;
  
  	struct {
-@@ -191,6 +197,19 @@
+@@ -191,6 +197,20 @@
  static inline enum key_type
  get_key_type(uint16_t code)
  {
@@ -1623,10 +1623,11 @@ diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
 +	const uint16_t KEY_PEN_END_CLICK = 0x2f3;
 +	const uint16_t KEY_PEN_END_DOUBLE_CLICK = 0x2f4;
 +	const uint16_t KEY_PEN_MODE_SWITCH = 0x2f5;
++	const uint16_t KEY_MMX_TOUCH = 0x2ff;
  	switch (code) {
  	case BTN_TOOL_PEN:
  	case BTN_TOOL_RUBBER:
-@@ -220,6 +239,17 @@
+@@ -220,6 +240,19 @@
  		return KEY_TYPE_KEY;
  	if (code >= BTN_TRIGGER_HAPPY && code <= BTN_TRIGGER_HAPPY40)
  		return KEY_TYPE_BUTTON;
@@ -1640,6 +1641,8 @@ diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
 +	if (code == AOD_SLIDE)
 +		return KEY_TYPE_KEY;
 +	if (code == KEY_DIV)
++		return KEY_TYPE_KEY;
++	if (code == KEY_MMX_TOUCH)
 +		return KEY_TYPE_KEY;
  	return KEY_TYPE_NONE;
  }
