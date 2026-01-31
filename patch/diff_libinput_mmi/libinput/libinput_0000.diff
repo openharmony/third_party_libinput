@@ -1167,17 +1167,19 @@ diff -Naur old/include/linux/freebsd/input-event-codes.h new/include/linux/freeb
  
  /* Code 255 is reserved for special needs of AT keyboard driver */
  
-@@ -772,6 +772,9 @@
+@@ -772,6 +772,11 @@
  #define BTN_TRIGGER_HAPPY39		0x2e6
  #define BTN_TRIGGER_HAPPY40		0x2e7
  
 +#define KEY_MOUSE_ASSISTANT		0x2e9
 +#define KEY_MOUSE_INTELLIGENCE_SELECTION		0x2ea
 +
++#define KEY_AOD_SINGLE_CLICK		0x2fd
++
  /* We avoid low common keys in module aliases so they don't get huge. */
  #define KEY_MIN_INTERESTING	KEY_MUTE
  #define KEY_MAX			0x2ff
-@@ -834,8 +837,10 @@
+@@ -834,8 +839,10 @@
  #define ABS_TOOL_WIDTH		0x1c
  
  #define ABS_VOLUME		0x20
@@ -1189,7 +1191,7 @@ diff -Naur old/include/linux/freebsd/input-event-codes.h new/include/linux/freeb
  
  /*
   * 0x2e is reserved and should not be used in input drivers.
-@@ -889,7 +894,8 @@
+@@ -889,7 +896,8 @@
  #define SW_MUTE_DEVICE		0x0e  /* set = device disabled */
  #define SW_PEN_INSERTED		0x0f  /* set = pen inserted */
  #define SW_MACHINE_COVER	0x10  /* set = cover closed */
@@ -1211,17 +1213,19 @@ diff -Naur old/include/linux/linux/input-event-codes.h new/include/linux/linux/i
  
  /* Code 255 is reserved for special needs of AT keyboard driver */
  
-@@ -772,6 +772,9 @@
+@@ -772,6 +772,11 @@
  #define BTN_TRIGGER_HAPPY39		0x2e6
  #define BTN_TRIGGER_HAPPY40		0x2e7
  
 +#define KEY_MOUSE_ASSISTANT		0x2e9
 +#define KEY_MOUSE_INTELLIGENCE_SELECTION		0x2ea
 +
++#define KEY_AOD_SINGLE_CLICK		0x2fd
++
  /* We avoid low common keys in module aliases so they don't get huge. */
  #define KEY_MIN_INTERESTING	KEY_MUTE
  #define KEY_MAX			0x2ff
-@@ -834,8 +837,10 @@
+@@ -834,8 +839,10 @@
  #define ABS_TOOL_WIDTH		0x1c
  
  #define ABS_VOLUME		0x20
@@ -1233,7 +1237,7 @@ diff -Naur old/include/linux/linux/input-event-codes.h new/include/linux/linux/i
  
  /*
   * 0x2e is reserved and should not be used in input drivers.
-@@ -889,7 +894,8 @@
+@@ -889,7 +896,8 @@
  #define SW_MUTE_DEVICE		0x0e  /* set = device disabled */
  #define SW_PEN_INSERTED		0x0f  /* set = pen inserted */
  #define SW_MACHINE_COVER	0x10  /* set = cover closed */
@@ -1647,7 +1651,7 @@ diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
  	switch (code) {
  	case BTN_TOOL_PEN:
  	case BTN_TOOL_RUBBER:
-@@ -220,6 +240,21 @@
+@@ -220,6 +240,23 @@
  		return KEY_TYPE_KEY;
  	if (code >= BTN_TRIGGER_HAPPY && code <= BTN_TRIGGER_HAPPY40)
  		return KEY_TYPE_BUTTON;
@@ -1663,6 +1667,8 @@ diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
 +	if (code == AOD_SLIDE)
 +		return KEY_TYPE_KEY;
 +	if (code == KEY_DIV)
++		return KEY_TYPE_KEY;
++	if (code == KEY_AOD_SINGLE_CLICK)
 +		return KEY_TYPE_KEY;
 +	if (code == KEY_MMX_TOUCH)
 +		return KEY_TYPE_KEY;
