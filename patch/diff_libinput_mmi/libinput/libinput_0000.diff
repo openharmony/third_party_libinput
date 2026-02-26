@@ -865,7 +865,17 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
  /**
   * @ingroup device
   *
-@@ -4343,6 +5054,12 @@
+@@ -4276,6 +4987,9 @@
+ libinput_device_has_capability(struct libinput_device *device,
+ 			       enum libinput_device_capability capability);
+ 
++int
++libinput_device_has_property(struct libinput_device *device, unsigned int property);
++
+ /**
+  * @ingroup device
+  *
+@@ -4343,6 +5057,12 @@
  libinput_device_touch_get_touch_count(struct libinput_device *device);
  
  /**
@@ -878,7 +888,7 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
   * @ingroup device
   *
   * Check if a @ref LIBINPUT_DEVICE_CAP_SWITCH device has a switch of the
-@@ -4363,6 +5080,23 @@
+@@ -4363,6 +5083,23 @@
  /**
   * @ingroup device
   *
@@ -902,7 +912,7 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
   * Return the number of buttons on a device with the
   * @ref LIBINPUT_DEVICE_CAP_TABLET_PAD capability.
   * Buttons on a pad device are numbered sequentially, see the
-@@ -5722,6 +6456,9 @@
+@@ -5722,6 +6459,9 @@
  enum libinput_config_click_method
  libinput_device_config_click_get_default_method(struct libinput_device *device);
  
@@ -912,7 +922,7 @@ diff -Naur old/export_include/libinput.h new/export_include/libinput.h
  /**
   * @ingroup config
   */
-@@ -6398,7 +7135,168 @@
+@@ -6398,7 +7138,168 @@
  unsigned int
  libinput_device_config_rotation_get_default_angle(struct libinput_device *device);
  
@@ -6866,7 +6876,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
 +			button, state, down_count);
  	}
 +}
- 
++
 +static void
 +evdev_pointer_post_button_touchpad(struct evdev_device *device,
 +			  uint64_t time,
@@ -6884,7 +6894,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
 +		if (state == LIBINPUT_BUTTON_STATE_RELEASED) {
 +			if (device->left_handed.change_to_enabled)
 +				device->left_handed.change_to_enabled(device);
-+
+ 
 +			if (device->scroll.change_scroll_method)
 +				device->scroll.change_scroll_method(device);
 +		}
@@ -7194,7 +7204,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  void
  evdev_device_set_default_calibration(struct evdev_device *device,
  				     const float calibration[6])
-@@ -2702,6 +2861,9 @@
+@@ -2702,12 +2861,21 @@
  		return !!(device->seat_caps & EVDEV_DEVICE_TABLET_PAD);
  	case LIBINPUT_DEVICE_CAP_SWITCH:
  		return !!(device->seat_caps & EVDEV_DEVICE_SWITCH);
@@ -7204,7 +7214,19 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  	default:
  		return false;
  	}
-@@ -2902,10 +3064,9 @@
+ }
+ 
+ int
++evdev_device_has_property(struct evdev_device *device, unsigned int property)
++{
++	return libevdev_has_property(device->evdev, property);
++}
++
++int
+ evdev_device_get_size(const struct evdev_device *device,
+ 		      double *width,
+ 		      double *height)
+@@ -2902,10 +3070,9 @@
  	if (device->scroll.direction != 0) {
  		switch (source) {
  		case LIBINPUT_POINTER_AXIS_SOURCE_FINGER:
@@ -7218,7 +7240,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  			break;
  		case LIBINPUT_POINTER_AXIS_SOURCE_CONTINUOUS:
  			pointer_notify_axis_continuous(&device->base,
-@@ -3063,21 +3224,29 @@
+@@ -3063,21 +3230,29 @@
  evdev_device_remove(struct evdev_device *device)
  {
  	struct libinput_device *dev;
@@ -7257,7 +7279,7 @@ diff -Naur old/src/evdev.c new/src/evdev.c
  	evdev_device_suspend(device);
  
  	if (device->dispatch->interface->remove)
-@@ -3163,3 +3332,85 @@
+@@ -3163,3 +3338,85 @@
  #endif
  	return has_left_handed;
  }
@@ -7476,7 +7498,17 @@ diff -Naur old/src/evdev.h new/src/evdev.h
  void
  evdev_device_set_default_calibration(struct evdev_device *device,
  				     const float calibration[6]);
-@@ -507,6 +561,9 @@
+@@ -494,6 +548,9 @@
+ 			    enum libinput_device_capability capability);
+ 
+ int
++evdev_device_has_property(struct evdev_device *device, unsigned int property);
++
++int
+ evdev_device_get_size(const struct evdev_device *device,
+ 		      double *w,
+ 		      double *h);
+@@ -507,6 +564,9 @@
  int
  evdev_device_get_touch_count(struct evdev_device *device);
  
@@ -7486,7 +7518,7 @@ diff -Naur old/src/evdev.h new/src/evdev.h
  int
  evdev_device_has_switch(struct evdev_device *device,
  			enum libinput_switch sw);
-@@ -561,6 +618,19 @@
+@@ -561,6 +621,19 @@
  			    uint64_t time,
  			    unsigned int button,
  			    enum libinput_button_state state);
@@ -7506,7 +7538,7 @@ diff -Naur old/src/evdev.h new/src/evdev.h
  void
  evdev_pointer_notify_physical_button(struct evdev_device *device,
  				     uint64_t time,
-@@ -646,6 +716,9 @@
+@@ -646,6 +719,9 @@
  static inline double
  evdev_convert_to_mm(const struct input_absinfo *absinfo, double v)
  {
@@ -7516,7 +7548,7 @@ diff -Naur old/src/evdev.h new/src/evdev.h
  	double value = v - absinfo->minimum;
  	return value/absinfo->resolution;
  }
-@@ -781,12 +854,15 @@
+@@ -781,12 +857,15 @@
  
  	if (!is_logged(evdev_libinput_context(device), priority))
  		return;
@@ -7534,7 +7566,7 @@ diff -Naur old/src/evdev.h new/src/evdev.h
  		 (priority > LIBINPUT_LOG_PRIORITY_DEBUG) ?  device->log_prefix_name : "",
  		 (priority > LIBINPUT_LOG_PRIORITY_DEBUG) ?  ": " : "",
  		 format);
-@@ -855,6 +931,9 @@
+@@ -855,6 +934,9 @@
  #define evdev_log_bug_kernel(d_, ...) evdev_log_msg((d_), LIBINPUT_LOG_PRIORITY_ERROR, "kernel bug: " __VA_ARGS__)
  #define evdev_log_bug_libinput(d_, ...) evdev_log_msg((d_), LIBINPUT_LOG_PRIORITY_ERROR, "libinput bug: " __VA_ARGS__)
  #define evdev_log_bug_client(d_, ...) evdev_log_msg((d_), LIBINPUT_LOG_PRIORITY_ERROR, "client bug: " __VA_ARGS__)
@@ -7544,7 +7576,7 @@ diff -Naur old/src/evdev.h new/src/evdev.h
  
  #define evdev_log_debug_ratelimit(d_, r_, ...) \
  	evdev_log_msg_ratelimit((d_), (r_), LIBINPUT_LOG_PRIORITY_DEBUG, __VA_ARGS__)
-@@ -1028,7 +1107,8 @@
+@@ -1028,7 +1110,8 @@
  				   "Axis %#x value %d is outside expected range [%d, %d]\n"
  				   "See %s/absolute_coordinate_ranges.html for details\n",
  				   code, value, min, max,
@@ -7554,7 +7586,7 @@ diff -Naur old/src/evdev.h new/src/evdev.h
  	}
  }
  
-@@ -1047,4 +1127,7 @@
+@@ -1047,4 +1130,7 @@
  	free(kbd);
  }
  
@@ -8485,19 +8517,21 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_event_touch_get_y_transformed(struct libinput_event_touch *event,
  				       uint32_t height)
  {
-@@ -945,7 +1260,7 @@
+@@ -945,7 +1260,65 @@
  }
  
  LIBINPUT_EXPORT double
 -libinput_event_touch_get_y(struct libinput_event_touch *event)
 +libinput_event_touch_get_tool_x(struct libinput_event_touch *event)
- {
- 	struct evdev_device *device = evdev_device(event->base.device);
- 
-@@ -955,9 +1270,360 @@
- 			   LIBINPUT_EVENT_TOUCH_DOWN,
- 			   LIBINPUT_EVENT_TOUCH_MOTION);
- 
++{
++	struct evdev_device *device = evdev_device(event->base.device);
++
++	require_event_type(libinput_event_get_context(&event->base),
++			   event->base.type,
++			   0,
++			   LIBINPUT_EVENT_TOUCH_DOWN,
++			   LIBINPUT_EVENT_TOUCH_MOTION);
++
 +	return evdev_convert_to_mm(device->abs.absinfo_x, event->tool_rect.x);
 +}
 +
@@ -8547,15 +8581,13 @@ diff -Naur old/src/libinput.c new/src/libinput.c
 +
 +LIBINPUT_EXPORT double
 +libinput_event_touch_get_tool_width(struct libinput_event_touch *event)
-+{
-+	struct evdev_device *device = evdev_device(event->base.device);
-+
-+	require_event_type(libinput_event_get_context(&event->base),
-+			   event->base.type,
-+			   0,
-+			   LIBINPUT_EVENT_TOUCH_DOWN,
-+			   LIBINPUT_EVENT_TOUCH_MOTION);
-+
+ {
+ 	struct evdev_device *device = evdev_device(event->base.device);
+ 
+@@ -955,9 +1328,302 @@
+ 			   LIBINPUT_EVENT_TOUCH_DOWN,
+ 			   LIBINPUT_EVENT_TOUCH_MOTION);
+ 
 +	return evdev_convert_to_mm(device->abs.absinfo_x, event->tool_rect.w);
 +}
 +
@@ -9822,7 +9854,20 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  LIBINPUT_EXPORT unsigned int
  libinput_device_get_id_product(struct libinput_device *device)
  {
-@@ -3356,6 +4714,15 @@
+@@ -3328,6 +4686,12 @@
+ }
+ 
+ LIBINPUT_EXPORT int
++libinput_device_has_property(struct libinput_device *device, unsigned int property)
++{
++	return evdev_device_has_property((struct evdev_device *)device, property);
++}
++
++LIBINPUT_EXPORT int
+ libinput_device_get_size(struct libinput_device *device,
+ 			 double *width,
+ 			 double *height)
+@@ -3356,6 +4720,15 @@
  }
  
  LIBINPUT_EXPORT int
@@ -9838,7 +9883,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_device_switch_has_switch(struct libinput_device *device,
  				  enum libinput_switch sw)
  {
-@@ -3363,6 +4730,13 @@
+@@ -3363,6 +4736,13 @@
  }
  
  LIBINPUT_EXPORT int
@@ -9852,7 +9897,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_device_tablet_pad_has_key(struct libinput_device *device, uint32_t code)
  {
  	return evdev_device_tablet_pad_has_key((struct evdev_device *)device,
-@@ -3537,7 +4911,8 @@
+@@ -3537,7 +4917,8 @@
  			   LIBINPUT_EVENT_POINTER_SCROLL_WHEEL,
  			   LIBINPUT_EVENT_POINTER_SCROLL_FINGER,
  			   LIBINPUT_EVENT_POINTER_SCROLL_CONTINUOUS,
@@ -9862,7 +9907,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  
  	return &event->base;
  }
-@@ -3558,6 +4933,19 @@
+@@ -3558,6 +4939,19 @@
  }
  
  LIBINPUT_EXPORT struct libinput_event *
@@ -9882,7 +9927,7 @@ diff -Naur old/src/libinput.c new/src/libinput.c
  libinput_event_gesture_get_base_event(struct libinput_event_gesture *event)
  {
  	require_event_type(libinput_event_get_context(&event->base),
-@@ -4764,3 +6152,301 @@
+@@ -4764,3 +6158,301 @@
  	}
  }
  #endif
@@ -11038,7 +11083,17 @@ diff -Naur old/src/libinput.h new/src/libinput.h
  /**
   * @ingroup device
   *
-@@ -4343,6 +5054,12 @@
+@@ -4276,6 +4987,9 @@
+ libinput_device_has_capability(struct libinput_device *device,
+ 			       enum libinput_device_capability capability);
+ 
++int
++libinput_device_has_property(struct libinput_device *device, unsigned int property);
++
+ /**
+  * @ingroup device
+  *
+@@ -4343,6 +5057,12 @@
  libinput_device_touch_get_touch_count(struct libinput_device *device);
  
  /**
@@ -11051,7 +11106,7 @@ diff -Naur old/src/libinput.h new/src/libinput.h
   * @ingroup device
   *
   * Check if a @ref LIBINPUT_DEVICE_CAP_SWITCH device has a switch of the
-@@ -4363,6 +5080,23 @@
+@@ -4363,6 +5083,23 @@
  /**
   * @ingroup device
   *
@@ -11075,7 +11130,7 @@ diff -Naur old/src/libinput.h new/src/libinput.h
   * Return the number of buttons on a device with the
   * @ref LIBINPUT_DEVICE_CAP_TABLET_PAD capability.
   * Buttons on a pad device are numbered sequentially, see the
-@@ -5722,6 +6456,9 @@
+@@ -5722,6 +6459,9 @@
  enum libinput_config_click_method
  libinput_device_config_click_get_default_method(struct libinput_device *device);
  
@@ -11085,7 +11140,7 @@ diff -Naur old/src/libinput.h new/src/libinput.h
  /**
   * @ingroup config
   */
-@@ -6398,6 +7135,166 @@
+@@ -6398,6 +7138,166 @@
  unsigned int
  libinput_device_config_rotation_get_default_angle(struct libinput_device *device);
  
