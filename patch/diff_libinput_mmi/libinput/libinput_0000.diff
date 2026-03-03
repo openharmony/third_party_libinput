@@ -1663,7 +1663,7 @@ diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
  	switch (code) {
  	case BTN_TOOL_PEN:
  	case BTN_TOOL_RUBBER:
-@@ -220,6 +240,24 @@
+@@ -220,6 +240,25 @@
  		return KEY_TYPE_KEY;
  	if (code >= BTN_TRIGGER_HAPPY && code <= BTN_TRIGGER_HAPPY40)
  		return KEY_TYPE_BUTTON;
