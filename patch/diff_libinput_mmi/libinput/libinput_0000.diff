@@ -1174,7 +1174,7 @@ diff -Naur old/include/linux/freebsd/input-event-codes.h new/include/linux/freeb
  
 -#define KEY_MICMUTE		248	/* Mute / unmute the microphone */
 +#define KEY_MICMUTE		251	/* Mute / unmute the microphone */
-+#define KEY_XKEY		0xfc	/* XKey */
++#define KEY_XKEY		0xfc	/* XKey / launch specific features and services */
  
  /* Code 255 is reserved for special needs of AT keyboard driver */
  
@@ -1221,7 +1221,7 @@ diff -Naur old/include/linux/linux/input-event-codes.h new/include/linux/linux/i
  
 -#define KEY_MICMUTE		248	/* Mute / unmute the microphone */
 +#define KEY_MICMUTE		251	/* Mute / unmute the microphone */
-+#define KEY_XKEY		0xfc	/* XKey */
++#define KEY_XKEY		0xfc	/* XKey / launch specific features and services */
  
  /* Code 255 is reserved for special needs of AT keyboard driver */
  
@@ -1669,8 +1669,6 @@ diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
  		return KEY_TYPE_BUTTON;
 +	if (code == KEY_MOUSE_ASSISTANT || code == KEY_MOUSE_INTELLIGENCE_SELECTION)
 +		return KEY_TYPE_KEY;
-+	if (code == KEY_XKEY)
-+		return KEY_TYPE_KEY;
 +	if (code == KEY_ENDCALL || code == KEY_FUNCTION)
 +		return KEY_TYPE_KEY;
 +	if (code == DAGGER_PRESS || code == DAGGER_CLICK || code == DAGGER_LONG_PRESS
@@ -1685,6 +1683,8 @@ diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
 +	if (code == KEY_AOD_SINGLE_CLICK)
 +		return KEY_TYPE_KEY;
 +	if (code == KEY_MMX_TOUCH)
++		return KEY_TYPE_KEY;
++	if (code == KEY_XKEY)
 +		return KEY_TYPE_KEY;
  	return KEY_TYPE_NONE;
  }
