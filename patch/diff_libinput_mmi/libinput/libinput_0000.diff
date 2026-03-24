@@ -2786,7 +2786,7 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
 +		uint64_t initial_time = 0;
 +		enum button_event current = 0;
 +		tp_for_each_touch(tp, t) {
-+			if (t->initial_time == 0) {
++			if (t->initial_time == 0 || t->has_ended) {
 +				continue;
 +			}
 +			if (initial_time < t->initial_time) {
