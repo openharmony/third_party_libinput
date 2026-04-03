@@ -14,6 +14,7 @@
 import("//build/ohos.gni")
 
 gen_src_dir = "//third_party/libinput"
+gen_src_patch = "//third_party/libinput/patch/diff_libinput_mmi/libinput/libinput_0000.diff"
 gen_dst_dir = root_out_dir + "/diff_libinput_mmi"
 patches_root_dir = gen_src_dir + "/patch"
 build_gn_dir = "$patches_root_dir/diff_libinput_mmi/libinput"
@@ -21,7 +22,7 @@ build_gn_dir = "$patches_root_dir/diff_libinput_mmi/libinput"
 action("apply_patch") {
   visibility = [ "*" ]
   script = "${gen_src_dir}/patch/apply_patch.sh"
-  inputs = [ "$gen_src_dir" ]
+  inputs = [ "$gen_src_patch" ]
   outputs = [
     "$gen_dst_dir/src/filter.c",
     "$gen_dst_dir/src/filter-custom.c",
