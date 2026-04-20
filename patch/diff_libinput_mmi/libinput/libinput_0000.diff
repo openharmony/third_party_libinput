@@ -1166,8 +1166,8 @@ diff -Naur old/include/config.h new/include/config.h
  #define LIBINPUT_TOOL_PATH "/data/libinput"
  
 diff -Naur old/include/linux/freebsd/input-event-codes.h new/include/linux/freebsd/input-event-codes.h
---- old/include/linux/freebsd/input-event-codes.h	2025-07-01 16:56:48.821091242 +0800
-+++ new/include/linux/freebsd/input-event-codes.h	2025-07-01 16:56:48.905091243 +0800
+--- old/include/linux/freebsd/input-event-codes.h	2026-04-20 09:32:53.001350346 +0800
++++ new/include/linux/freebsd/input-event-codes.h	2026-04-20 11:15:47.995144330 +0800
 @@ -335,7 +335,8 @@
  #define KEY_WIMAX		KEY_WWAN
  #define KEY_RFKILL		247	/* Key that controls all radios */
@@ -1178,19 +1178,22 @@ diff -Naur old/include/linux/freebsd/input-event-codes.h new/include/linux/freeb
  
  /* Code 255 is reserved for special needs of AT keyboard driver */
  
-@@ -772,6 +773,11 @@
+@@ -772,6 +773,14 @@
  #define BTN_TRIGGER_HAPPY39		0x2e6
  #define BTN_TRIGGER_HAPPY40		0x2e7
  
 +#define KEY_MOUSE_ASSISTANT		0x2e9
 +#define KEY_MOUSE_INTELLIGENCE_SELECTION		0x2ea
 +
++#define KEY_FINGERPRINT_SLIDE_UP		0x2eb
++#define KEY_FINGERPRINT_SLIDE_DOWN		0x2ec
+
 +#define KEY_AOD_SINGLE_CLICK		0x2fd
 +
  /* We avoid low common keys in module aliases so they don't get huge. */
  #define KEY_MIN_INTERESTING	KEY_MUTE
  #define KEY_MAX			0x2ff
-@@ -834,8 +840,10 @@
+@@ -834,8 +843,10 @@
  #define ABS_TOOL_WIDTH		0x1c
  
  #define ABS_VOLUME		0x20
@@ -1213,8 +1216,8 @@ diff -Naur old/include/linux/freebsd/input-event-codes.h new/include/linux/freeb
  
  /*
 diff -Naur old/include/linux/linux/input-event-codes.h new/include/linux/linux/input-event-codes.h
---- old/include/linux/linux/input-event-codes.h	2025-07-01 16:56:48.821091242 +0800
-+++ new/include/linux/linux/input-event-codes.h	2025-07-01 16:56:48.905091243 +0800
+--- old/include/linux/linux/input-event-codes.h	2026-04-20 09:32:53.001350346 +0800
++++ new/include/linux/linux/input-event-codes.h	2026-04-20 11:16:26.905280483 +0800
 @@ -335,7 +335,8 @@
  #define KEY_WIMAX		KEY_WWAN
  #define KEY_RFKILL		247	/* Key that controls all radios */
@@ -1225,19 +1228,22 @@ diff -Naur old/include/linux/linux/input-event-codes.h new/include/linux/linux/i
  
  /* Code 255 is reserved for special needs of AT keyboard driver */
  
-@@ -772,6 +773,11 @@
+@@ -772,6 +773,14 @@
  #define BTN_TRIGGER_HAPPY39		0x2e6
  #define BTN_TRIGGER_HAPPY40		0x2e7
  
 +#define KEY_MOUSE_ASSISTANT		0x2e9
 +#define KEY_MOUSE_INTELLIGENCE_SELECTION		0x2ea
 +
++#define KEY_FINGERPRINT_SLIDE_UP		0x2eb
++#define KEY_FINGERPRINT_SLIDE_DOWN		0x2ec
+
 +#define KEY_AOD_SINGLE_CLICK		0x2fd
 +
  /* We avoid low common keys in module aliases so they don't get huge. */
  #define KEY_MIN_INTERESTING	KEY_MUTE
  #define KEY_MAX			0x2ff
-@@ -834,8 +840,10 @@
+@@ -834,8 +843,10 @@
  #define ABS_TOOL_WIDTH		0x1c
  
  #define ABS_VOLUME		0x20
@@ -1615,8 +1621,8 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
 +	return hw_is_key_down(dispatch, btnToolType);
 +}
 diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
---- old/src/evdev-fallback.h	2026-01-09 14:20:22.394114100 +0800
-+++ new/src/evdev-fallback.h	2026-01-09 14:22:42.741541100 +0800
+--- old/src/evdev-fallback.h	2026-04-20 09:32:53.005350418 +0800
++++ new/src/evdev-fallback.h	2026-04-20 11:11:40.797551531 +0800
 @@ -75,11 +75,16 @@
  
  struct mt_slot {
@@ -1663,7 +1669,7 @@ diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
  	switch (code) {
  	case BTN_TOOL_PEN:
  	case BTN_TOOL_RUBBER:
-@@ -220,6 +240,25 @@
+@@ -220,6 +240,27 @@
  		return KEY_TYPE_KEY;
  	if (code >= BTN_TRIGGER_HAPPY && code <= BTN_TRIGGER_HAPPY40)
  		return KEY_TYPE_BUTTON;
@@ -1685,6 +1691,8 @@ diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
 +	if (code == KEY_MMX_TOUCH)
 +		return KEY_TYPE_KEY;
 +	if (code == KEY_XKEY)
++		return KEY_TYPE_KEY;
++	if (code == KEY_FINGERPRINT_SLIDE_UP || code == KEY_FINGERPRINT_SLIDE_DOWN)
 +		return KEY_TYPE_KEY;
  	return KEY_TYPE_NONE;
  }
