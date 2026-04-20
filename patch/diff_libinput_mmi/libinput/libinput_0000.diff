@@ -1166,8 +1166,8 @@ diff -Naur old/include/config.h new/include/config.h
  #define LIBINPUT_TOOL_PATH "/data/libinput"
  
 diff -Naur old/include/linux/freebsd/input-event-codes.h new/include/linux/freebsd/input-event-codes.h
---- old/include/linux/freebsd/input-event-codes.h	2026-04-20 09:32:53.001350346 +0800
-+++ new/include/linux/freebsd/input-event-codes.h	2026-04-20 11:15:47.995144330 +0800
+--- old/include/linux/freebsd/input-event-codes.h	2025-07-01 16:56:48.821091242 +0800	 
++++ new/include/linux/freebsd/input-event-codes.h	2025-07-01 16:56:48.905091243 +0800
 @@ -335,7 +335,8 @@
  #define KEY_WIMAX		KEY_WWAN
  #define KEY_RFKILL		247	/* Key that controls all radios */
@@ -1216,8 +1216,8 @@ diff -Naur old/include/linux/freebsd/input-event-codes.h new/include/linux/freeb
  
  /*
 diff -Naur old/include/linux/linux/input-event-codes.h new/include/linux/linux/input-event-codes.h
---- old/include/linux/linux/input-event-codes.h	2026-04-20 09:32:53.001350346 +0800
-+++ new/include/linux/linux/input-event-codes.h	2026-04-20 11:16:26.905280483 +0800
+--- old/include/linux/linux/input-event-codes.h	2025-07-01 16:56:48.821091242 +0800	 
++++ new/include/linux/linux/input-event-codes.h	2025-07-01 16:56:48.905091243 +0800
 @@ -335,7 +335,8 @@
  #define KEY_WIMAX		KEY_WWAN
  #define KEY_RFKILL		247	/* Key that controls all radios */
@@ -1621,8 +1621,8 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
 +	return hw_is_key_down(dispatch, btnToolType);
 +}
 diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
---- old/src/evdev-fallback.h	2026-04-20 09:32:53.005350418 +0800
-+++ new/src/evdev-fallback.h	2026-04-20 11:11:40.797551531 +0800
+--- old/src/evdev-fallback.h	2026-01-09 14:20:22.394114100 +0800	 
++++ new/src/evdev-fallback.h	2026-01-09 14:22:42.741541100 +0800
 @@ -75,11 +75,16 @@
  
  struct mt_slot {
