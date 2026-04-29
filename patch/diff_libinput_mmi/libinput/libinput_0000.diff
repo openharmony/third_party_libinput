@@ -5452,7 +5452,7 @@ diff -Naur old/src/evdev-mt-touchpad.c new/src/evdev-mt-touchpad.c
 +		return;
 +	}
 +
-+	if (seat_slot == -1) {
++	if (seat_slot == -1 && !t->has_ended) {
 +		t->seat_slot = dispatch->orginal.seat_slot_id++;
 +		dispatch->orginal.active_slot_count++;
 +
