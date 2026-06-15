@@ -11837,10 +11837,10 @@ diff -Naur old/src/util-strings.h new/src/util-strings.h
  
  	for (size_t idx = 0; idx < npairs; idx++) {
  		char *pair = pairs[idx];
-@@ -468,7 +468,7 @@
- 		return strdup(str);
+@@ -481,7 +481,7 @@
+ 	if (!needs_sanitization)
+ 		return strndup(str, slen);
  
- 	size_t slen = min(strlen(str), 512);
 -	char *sanitized = zalloc(2 * slen + 1);
 +	char *sanitized = (char *)zalloc(2 * slen + 1);
  	const char *src = str;
@@ -11993,12 +11993,12 @@ diff -Naur old/tools/libinput-record.c new/tools/libinput-record.c
 diff -Naur old/udev/libinput-device-group.c new/udev/libinput-device-group.c
 --- old/udev/libinput-device-group.c	2025-07-01 16:56:48.885091243 +0800
 +++ new/udev/libinput-device-group.c	2025-07-01 16:56:48.913091243 +0800
-@@ -137,7 +137,7 @@
+@@ -138,7 +138,7 @@
  				*product_id = pid;
  				best_dist = dist;
  
 -				free(*phys_attr);
 +				free((char*)*phys_attr);
- 				*phys_attr = safe_strdup(phys);
+ 				*phys_attr = phys;
+ 				phys = NULL;
  			}
- 		}
