@@ -2876,7 +2876,7 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
 +}
 diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestures.c
 --- old/src/evdev-mt-touchpad-gestures.c	2026-01-01 00:00:00.000000000 +0800
-+++ new/src/evdev-mt-touchpad-gestures.c	2026-01-01 00:00:00.000000000 +0800
++++ new/src/evdev-mt-touchpad-gestures.c	2026-06-23 11:17:29.956274760 +0800
 @@ -25,6 +25,7 @@
  
  #include <math.h>
@@ -4322,7 +4322,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
 +		return false;
 +	}
 +
-+	bool enable = ture;
++	bool enable = true;
 +	tp_gesture_four_finger_enable(tp, &enable);
 +	return enable;
 +}
@@ -4601,9 +4601,9 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  			active_touches++;
 +			delta = tp_get_delta(t);
 +			delta_mm = hypot(delta.x, delta.y);
-+			if (delta_mm > 1.5)
++			if (delta_mm > moved_threshold)
 +				moved_touches++;
-+			if (tp_touch_at_edge(tp, t) != 0 && delta_mm < 1.5)
++			if (tp_touch_at_edge(tp, t) != 0 && delta_mm < moved_threshold)
 +				edge_touches++;
 +			moved_delta = tp_touch_mm_moved(tp, t);
 +			max_moved_distance = max(max_moved_distance, hypot(moved_delta.x, moved_delta.y));
