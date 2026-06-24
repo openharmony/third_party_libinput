@@ -1,16 +1,3 @@
-Copyright (C) 2021-2024 Huawei Device Co., Ltd.
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at\n
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
 diff -Naur old/export_include/libinput.h new/export_include/libinput.h
 --- old/export_include/libinput.h	2026-01-01 00:00:00.000000000 +0800
 +++ new/export_include/libinput.h	2026-01-01 00:00:00.000000000 +0800
@@ -2876,7 +2863,7 @@ diff -Naur old/src/evdev-mt-touchpad-buttons.c new/src/evdev-mt-touchpad-buttons
 +}
 diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestures.c
 --- old/src/evdev-mt-touchpad-gestures.c	2026-01-01 00:00:00.000000000 +0800
-+++ new/src/evdev-mt-touchpad-gestures.c	2026-06-23 11:17:29.956274760 +0800
++++ new/src/evdev-mt-touchpad-gestures.c	2026-06-24 19:28:00.239672328 +0800
 @@ -25,6 +25,7 @@
  
  #include <math.h>
@@ -2976,7 +2963,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  tp_gesture_init_scroll(struct tp_dispatch *tp)
  {
  	struct phys_coords zero = {0.0, 0.0};
-@@ -133,18 +188,21 @@
+@@ -133,18 +188,53 @@
  	tp->scroll.duration.v = 0;
  	tp->scroll.vector = zero;
  	tp->scroll.time_prev = 0;
@@ -2999,10 +2986,42 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  {
 -	return tp_get_touches_delta(tp, true);
 +	return tp_get_touches_delta(tp, true, time);
++}
++
++static void
++tp_gesture_four_finger_enable(struct tp_dispatch *tp, bool *enable)
++{
++	if (tp == NULL) {
++		return;
++	}
++
++	struct quirks *q;
++	bool enable_quirk = true;
++	if (q == NULL) {
++		return;
++	}
++	bool got_enable = quirks_get_bool(q, QUIRK_ATTR_TOUCHPAD_FOUR_FINGER_SWIPE_ENABLE, &enable_quirk);
++	if (got_enable) {
++		*enable = enable_quirk;
++	}
++	evdev_log_libinput_debug(tp->device, "quirk: TOUCHPAD_FOUR_FINGER_SWIPE_ENABLE = %s", enable_quirk ? "true" : "false");
++	quirks_unref(q);
++}
++
++static bool
++tp_gesture_is_four_finger_supported(struct tp_dispatch *tp)
++{
++	if (tp == NULL) {
++		return false;
++	}
++
++	bool enable = true;
++	tp_gesture_four_finger_enable(tp, &enable);
++	return enable;
  }
  
  static void
-@@ -169,18 +227,33 @@
+@@ -169,18 +259,33 @@
  		break;
  	case GESTURE_STATE_SCROLL:
  		tp_gesture_init_scroll(tp);
@@ -3041,7 +3060,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  		break;
  	case GESTURE_STATE_POINTER_MOTION:
  		break;
-@@ -190,15 +263,15 @@
+@@ -190,15 +295,15 @@
  }
  
  static struct device_float_coords
@@ -3061,7 +3080,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  	return raw;
  }
-@@ -216,24 +289,318 @@
+@@ -216,24 +321,318 @@
  	 * it twice (here and in tp_gesture_post_pointer_motion) with the same
  	 * event.
  	 */
@@ -3383,7 +3402,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  				      time,
  				      &delta,
  				      &unaccel);
-@@ -243,7 +610,7 @@
+@@ -243,7 +642,7 @@
  static unsigned int
  tp_gesture_get_active_touches(const struct tp_dispatch *tp,
  			      struct tp_touch **touches,
@@ -3392,7 +3411,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  {
  	unsigned int n = 0;
  	struct tp_touch *t;
-@@ -251,7 +618,7 @@
+@@ -251,7 +650,7 @@
  	memset(touches, 0, count * sizeof(struct tp_touch *));
  
  	tp_for_each_touch(tp, t) {
@@ -3401,7 +3420,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  			touches[n++] = t;
  			if (n == count)
  				return count;
-@@ -271,6 +638,56 @@
+@@ -271,6 +670,56 @@
  	return n;
  }
  
@@ -3458,7 +3477,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  static inline int
  tp_gesture_same_directions(int dir1, int dir2)
  {
-@@ -288,12 +705,12 @@
+@@ -288,12 +737,12 @@
  }
  
  static struct phys_coords
@@ -3474,7 +3493,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  	return evdev_device_unit_delta_to_mm(tp->device, &delta);
  }
-@@ -860,6 +1277,158 @@
+@@ -860,6 +1309,158 @@
  		tp_gesture_handle_event(tp, GESTURE_EVENT_HOLD_TIMEOUT, time);
  }
  
@@ -3633,7 +3652,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  static void
  tp_gesture_detect_motion_gestures(struct tp_dispatch *tp, uint64_t time)
  {
-@@ -873,6 +1442,33 @@
+@@ -873,6 +1474,33 @@
  	double thumb_mm, finger_mm;
  	double min_move = 1.5; /* min movement threshold in mm - count this touch */
  	double max_move = 4.0; /* max movement threshold in mm - ignore other touch */
@@ -3667,7 +3686,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	bool is_hold_and_motion;
  
  	first_moved = tp_gesture_mm_moved(tp, first);
-@@ -883,7 +1479,6 @@
+@@ -883,7 +1511,6 @@
  			return;
  
  		is_hold_and_motion = (first_mm < HOLD_AND_MOTION_THRESHOLD);
@@ -3675,7 +3694,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  		if (tp->gesture.state == GESTURE_STATE_HOLD &&
  		    is_hold_and_motion) {
  			tp_gesture_handle_event(tp,
-@@ -911,8 +1506,8 @@
+@@ -911,8 +1538,8 @@
  	}
  
  	/* Need more margin for error when there are more fingers */
@@ -3686,7 +3705,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  	second_moved = tp_gesture_mm_moved(tp, second);
  	second_mm = hypot(second_moved.x, second_moved.y);
-@@ -941,12 +1536,58 @@
+@@ -941,12 +1568,58 @@
  	if ((!tp->gesture.enabled ||
  	     (distance_mm.x < 40.0 && distance_mm.y < 7.0)) &&
  	    time > (tp->gesture.initial_time + DEFAULT_GESTURE_SWIPE_TIMEOUT)) {
@@ -3749,7 +3768,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	}
  
  	/* If one touch exceeds the max_move threshold while the other has not
-@@ -955,27 +1596,34 @@
+@@ -955,27 +1628,34 @@
  	 * place while the other moves.
  	 */
  	if (first_mm >= max_move || second_mm >= max_move) {
@@ -3799,7 +3818,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  		/* If more than 2 fingers are involved, and the thumb moves
  		 * while the fingers stay still, assume a pinch if eligible.
  		 */
-@@ -991,8 +1639,21 @@
+@@ -991,8 +1671,21 @@
  	/* If either touch is still below the min_move threshold, we can't
  	 * tell what kind of gesture this is.
  	 */
@@ -3823,7 +3842,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  	/* Both touches have exceeded the min_move threshold, so we have a
  	 * valid gesture. Update gesture initial time and get directions so
-@@ -1016,7 +1677,27 @@
+@@ -1016,7 +1709,27 @@
  			return;
  		}
  	}
@@ -3852,7 +3871,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	/* If the touches are moving away from each other, this is a pinch */
  	tp_gesture_handle_event(tp, GESTURE_EVENT_PINCH, time);
  }
-@@ -1053,10 +1734,12 @@
+@@ -1053,10 +1766,12 @@
  {
  	struct tp_touch *first, *second;
  	struct tp_touch *touches[4];
@@ -3866,7 +3885,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  
  	first = touches[0];
  	second = touches[1];
-@@ -1099,13 +1782,14 @@
+@@ -1099,13 +1814,14 @@
  	 *   thumb or held-down clickpad
  	 */
  	if (ntouches > 2) {
@@ -3888,7 +3907,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  		}
  
  		if (first == second)
-@@ -1119,6 +1803,10 @@
+@@ -1119,6 +1835,10 @@
  	tp->gesture.touches[0] = first;
  	tp->gesture.touches[1] = second;
  
@@ -3899,7 +3918,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	tp_gesture_handle_event(tp, GESTURE_EVENT_FINGER_DETECTED, time);
  }
  
-@@ -1143,6 +1831,9 @@
+@@ -1143,6 +1863,9 @@
  static void
  tp_gesture_handle_state_hold_and_pointer_motion(struct tp_dispatch *tp, uint64_t time)
  {
@@ -3909,7 +3928,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	if (tp->queued & TOUCHPAD_EVENT_MOTION)
  		tp_gesture_post_pointer_motion(tp, time);
  
-@@ -1152,10 +1843,216 @@
+@@ -1152,10 +1875,216 @@
  static void
  tp_gesture_handle_state_pointer_motion(struct tp_dispatch *tp, uint64_t time)
  {
@@ -4127,7 +4146,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  static void
  tp_gesture_handle_state_scroll(struct tp_dispatch *tp, uint64_t time)
  {
-@@ -1165,17 +2062,19 @@
+@@ -1165,17 +2094,19 @@
  	if (tp->scroll.method != LIBINPUT_CONFIG_SCROLL_2FG)
  		return;
  
@@ -4156,7 +4175,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
  	/* scroll is not accelerated by default */
  	delta = tp_filter_scroll(tp, &raw, time);
  
-@@ -1184,20 +2083,218 @@
+@@ -1184,20 +2115,186 @@
  
  	tp_gesture_start(tp, time);
  	tp_gesture_apply_scroll_constraints(tp, &raw, &delta, time);
@@ -4296,38 +4315,6 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
 +}
 +
 +static void
-+tp_gesture_four_finger_enable(struct tp_dispatch *tp, bool *enable)
-+{
-+	if (tp == NULL) {
-+		return;
-+	}
-+
-+	struct quirks *q;
-+	bool enable_quirk = true;
-+	if (q= NULL) {
-+		return;
-+	}
-+	bool got_enable = quirks_get_bool(q, QUIRK_ATTR_TOUCHPAD_FOUR_FINGER_SWIPE_ENABLE, &enable_quirk);
-+	if (got_enable) {
-+		*enable = enable_quirk;
-+	}
-+	evdev_log_libinput_debug(tp->device, "get quirks, four finger enable:%d", *enable_quirk);
-+	quirks_unref(q);
-+}
-+
-+static bool
-+tp_gesture_is_four_finger_supported(struct tp_dispatch *tp)
-+{
-+	if (tp == NULL) {
-+		return false;
-+	}
-+
-+	bool enable = true;
-+	tp_gesture_four_finger_enable(tp, &enable);
-+	return enable;
-+}
-+
-+static void
 +tp_gesture_handle_state_swipe_private(struct tp_dispatch *tp, uint64_t time)
 +{
 +	struct device_float_coords raw;
@@ -4349,7 +4336,7 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
 +			evdev_log_error(tp->device, "libinput gesture is unknown.");
 +		}
 +
-+		if (tp->finger_count == 4 && !tp_gesture_is_four_finger_supported(tp)) {
++		if (tp->gesture.finger_count == 4 && !tp_gesture_is_four_finger_supported(tp)) {
 +			evdev_log_libinput_debug(tp->device, "libinput gesture four finger swipe is not supported.");
 +			return;
 +
@@ -11423,7 +11410,7 @@ diff -Naur old/src/path-seat.c new/src/path-seat.c
  
 diff -Naur old/src/quirks.c new/src/quirks.c
 --- old/src/quirks.c	2026-01-01 00:00:00.000000000 +0800
-+++ new/src/quirks.c	2026-01-01 00:00:00.000000000 +0800
++++ new/src/quirks.c	2026-06-24 19:28:05.931666995 +0800
 @@ -271,6 +271,7 @@
  	case QUIRK_MODEL_TRACKBALL:			return "ModelTrackball";
  	case QUIRK_MODEL_WACOM_TOUCHPAD:		return "ModelWacomTouchpad";
@@ -11768,7 +11755,7 @@ diff -Naur old/src/quirks.c new/src/quirks.c
  	}
 diff -Naur old/src/quirks.h new/src/quirks.h
 --- old/src/quirks.h	2026-01-01 00:00:00.000000000 +0800
-+++ new/src/quirks.h	2026-01-01 00:00:00.000000000 +0800
++++ new/src/quirks.h	2026-06-24 19:28:02.807667305 +0800
 @@ -88,6 +88,7 @@
  	QUIRK_MODEL_WACOM_TOUCHPAD,
  	QUIRK_MODEL_PRESSURE_PAD,
@@ -11777,7 +11764,7 @@ diff -Naur old/src/quirks.h new/src/quirks.h
  
  	_QUIRK_LAST_MODEL_QUIRK_, /* Guard: do not modify */
  
-@@ -109,6 +110,44 @@
+@@ -109,6 +110,45 @@
  	QUIRK_ATTR_MSC_TIMESTAMP,
  	QUIRK_ATTR_EVENT_CODE,
  	QUIRK_ATTR_INPUT_PROP,
@@ -11793,6 +11780,7 @@ diff -Naur old/src/quirks.h new/src/quirks.h
 +	QUIRK_ATTR_TOUCHPAD_MAX_MOVE_STEP,
 +	QUIRK_ATTR_TOUCHPAD_FOUR_FINGER_DISTANCE_SCALE,
 +	QUIRK_ATTR_TOUCHPAD_FOUR_FINGER_DURATION,
++	QUIRK_ATTR_TOUCHPAD_FOUR_FINGER_ENABLE,
 +	QUIRK_ATTR_TOUCHPAD_FINGER_MOVED_THRESHOLD,
 +	QUIRK_ATTR_TOUCHPAD_ALL_FINGERS_DOWN_DURATION,
 +	QUIRK_ATTR_TOUCHPAD_MULTIFINGER_HOLD_ONEFINGER_MOVE_THRESHOLD,
