@@ -3013,11 +3013,11 @@ diff -Naur old/src/evdev-mt-touchpad-gestures.c new/src/evdev-mt-touchpad-gestur
 +	if (q == NULL) {
 +		return;
 +	}
-+	bool got_enable = quirks_get_bool(q, QUIRK_ATTR_TOUCHPAD_FOUR_FINGER_SWIPE_ENABLE, &enable_quirk);
++	bool got_enable = quirks_get_bool(q, QUIRK_ATTR_TOUCHPAD_FOUR_FINGER_ENABLE, &enable_quirk);
 +	if (got_enable) {
 +		*enable = enable_quirk;
 +	}
-+	evdev_log_libinput_debug(tp->device, "quirk: TOUCHPAD_FOUR_FINGER_SWIPE_ENABLE = %s", enable_quirk ? "true" : "false");
++	evdev_log_libinput_debug(tp->device, "quirk: TOUCHPAD_FOUR_FINGER_ENABLE = %s", enable_quirk ? "true" : "false");
 +	quirks_unref(q);
 +}
 +
