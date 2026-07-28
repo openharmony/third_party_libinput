@@ -1682,11 +1682,13 @@ diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
  	} abs;
  
  	struct {
-@@ -191,6 +197,21 @@
+@@ -191,6 +197,23 @@
  static inline enum key_type
  get_key_type(uint16_t code)
  {
 +	const uint16_t KEY_ENDCALL = 0x2e8;
++	const uint16_t KEY_LIFT_PEN = 0x2ee;
++	const uint16_t KEY_DOWN_PEN = 0x2ef;
 +	const uint16_t KEY_FUNCTION = 0x2fe;
 +	const uint16_t DAGGER_PRESS = 0x2f8;
 +	const uint16_t DAGGER_CLICK = 0x2f9;
@@ -1704,7 +1706,7 @@ diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
  	switch (code) {
  	case BTN_TOOL_PEN:
  	case BTN_TOOL_RUBBER:
-@@ -220,6 +241,29 @@
+@@ -222,6 +243,30 @@
  		return KEY_TYPE_KEY;
  	if (code >= BTN_TRIGGER_HAPPY && code <= BTN_TRIGGER_HAPPY40)
  		return KEY_TYPE_BUTTON;
@@ -1715,7 +1717,8 @@ diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
 +	if (code == DAGGER_PRESS || code == DAGGER_CLICK || code == DAGGER_LONG_PRESS
 +		|| code == KEY_PEN_AIR_MOUSE || code == KEY_PEN_LIGHT_PINCH || code == KEY_PEN_AI 
 +		|| code == KEY_PEN_END_CLICK || code == KEY_PEN_END_DOUBLE_CLICK
-+		|| code == KEY_PEN_MODE_SWITCH || code == KEY_PEN_WRITING_MOUSE)
++		|| code == KEY_PEN_MODE_SWITCH || code == KEY_PEN_WRITING_MOUSE
++		|| code == KEY_LIFT_PEN || code == KEY_DOWN_PEN)
 +		return KEY_TYPE_KEY;
 +	if (code == AOD_SLIDE)
 +		return KEY_TYPE_KEY;
