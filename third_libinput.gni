@@ -15,9 +15,14 @@ third_libinput_root_path = rebase_path(".")
 
 declare_args() {
   libinput_feature_pen = false
+  libinput_feature_seatslot_unify = false
 }
 third_input_default_defines = []
 
 if (libinput_feature_pen) {
   third_input_default_defines += [ "OHOS_BUILD_ENABLE_PEN" ]
+}
+
+if (libinput_feature_seatslot_unify) {
+  third_input_default_defines += [ "OHOS_BUILD_ENABLE_SEATSLOT_UNIFY" ]
 }

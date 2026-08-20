@@ -11432,16 +11432,19 @@ diff -Naur old/src/libinput.h new/src/libinput.h
 diff -Naur old/src/path-seat.c new/src/path-seat.c
 --- old/src/path-seat.c	2026-01-01 00:00:00.000000000 +0800
 +++ new/src/path-seat.c	2026-01-01 00:00:00.000000000 +0800
-@@ -137,7 +137,7 @@
+@@ -137,7 +137,11 @@
  	if (seat_logical_name_override) {
  		seat_logical_name = safe_strdup(seat_logical_name_override);
  	} else {
--		seat_prop = udev_device_get_property_value(udev_device, "WL_SEAT");
++#ifdef OHOS_BUILD_ENABLE_SEATSLOT_UNIFY
+ 		seat_prop = udev_device_get_property_value(udev_device, "WL_SEAT");
++#else
 +		seat_prop = udev_device_get_sysname(udev_device);
++#endif
  		seat_logical_name = safe_strdup(seat_prop ? seat_prop : default_seat_name);
  	}
- 
-@@ -365,25 +365,26 @@
+
+@@ -365,25 +369,26 @@
  	struct libinput_device *device;
  
  	if (strlen(path) > PATH_MAX) {

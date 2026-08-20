@@ -14,7 +14,10 @@
         "name": "libinput",
         "subsystem": "thirdparty",
         "syscap": [],
-        "features": ["libinput_feature_pen"],
+        "features": [
+            "libinput_feature_pen",
+            "libinput_feature_seatslot_unify"
+        ],
         "adapted_system_type": [ "standard" ],
         "rom": "",
         "ram": "",
