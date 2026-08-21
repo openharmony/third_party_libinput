@@ -1736,9 +1736,7 @@ diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
 +		return KEY_TYPE_KEY;
 +	if (code == KEY_FINGERPRINT_SLIDE_UP || code == KEY_FINGERPRINT_SLIDE_DOWN)
 +		return KEY_TYPE_KEY;
-+	if (code == KEY_BACK_PANEL_DOUBLE_TAP)
-+		return KEY_TYPE_KEY;
-+	if (code == KEY_PEELING)
++	if (code == KEY_BACK_PANEL_DOUBLE_TAP || code == KEY_PEELING)
 +		return KEY_TYPE_KEY;
  	return KEY_TYPE_NONE;
  }
