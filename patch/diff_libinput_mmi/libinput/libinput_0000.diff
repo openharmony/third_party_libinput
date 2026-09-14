@@ -1194,20 +1194,19 @@ diff -Naur old/include/linux/freebsd/input-event-codes.h new/include/linux/freeb
 +
 +#define KEY_PEELING		0x2f6
 +
-+#define KEY_PTZ_CLICK		0x300 /* Click the button on the gimbal */
-+#define KEY_PTZ_FOCUS_LEFT		0x301 /* The left focus button on the gimbal */
-+#define KEY_PTZ_FOCUS_RIGHT		0x302 /* The right focus button on the gimbal */
-+#define KEY_PTZ_EXPOSE_LEFT		0x303 /* The left expose button on the gimbal */
-+#define KEY_PTZ_EXPOSE_RIGHT		0x304 /* The right expose button on the gimbal */
-+#define KEY_PTZ_SHUTTER_LEFT		0x305 /* The left shutter button on the gimbal */
-+#define KEY_PTZ_SHUTTER_RIGHT		0x306 /* The right shutter button on the gimbal */
-+#define KEY_PTZ_APERTURE_LEFT		0x307 /* The left aperture button on the gimbal */
-+#define KEY_PTZ_APERTURE_RIGHT		0x308 /* The right aperture button on the gimbal */
++#define KEY_FISHING_CHART		0x281 /* Click the button on the gimbal */
++#define KEY_SINGLE_RANGE_RADAR		0x282 /* The left focus button on the gimbal */
++#define KEY_DUAL_RANGE_RADAR		0x283 /* The right focus button on the gimbal */
++#define KEY_RADAR_OVERLAY		0x284 /* The left expose button on the gimbal */
++#define KEY_TRADITIONAL_SONAR		0x285 /* The right expose button on the gimbal */
++#define KEY_CLEARVU_SONAR		0x286 /* The left shutter button on the gimbal */
++#define KEY_SIDEVU_SONAR		0x287 /* The right shutter button on the gimbal */
++#define KEY_NAV_INFO		0x288 /* The left aperture button on the gimbal */
++#define KEY_BRIGHTNESS_MENU		0x289 /* The right aperture button on the gimbal */
 +
  /* We avoid low common keys in module aliases so they don't get huge. */
  #define KEY_MIN_INTERESTING	KEY_MUTE
--#define KEY_MAX			0x2ff
-+#define KEY_MAX			0x309
+ #define KEY_MAX			0x2ff
  #define KEY_CNT			(KEY_MAX+1)
  
  /*
@@ -1262,20 +1261,19 @@ diff -Naur old/include/linux/linux/input-event-codes.h new/include/linux/linux/i
 +
 +#define KEY_PEELING		0x2f6
 +
-+#define KEY_PTZ_CLICK		0x300 /* Click the button on the gimbal */
-+#define KEY_PTZ_FOCUS_LEFT		0x301 /* The left focus button on the gimbal */
-+#define KEY_PTZ_FOCUS_RIGHT		0x302 /* The right focus button on the gimbal */
-+#define KEY_PTZ_EXPOSE_LEFT		0x303 /* The left expose button on the gimbal */
-+#define KEY_PTZ_EXPOSE_RIGHT		0x304 /* The right expose button on the gimbal */
-+#define KEY_PTZ_SHUTTER_LEFT		0x305 /* The left shutter button on the gimbal */
-+#define KEY_PTZ_SHUTTER_RIGHT		0x306 /* The right shutter button on the gimbal */
-+#define KEY_PTZ_APERTURE_LEFT		0x307 /* The left aperture button on the gimbal */
-+#define KEY_PTZ_APERTURE_RIGHT		0x308 /* The right aperture button on the gimbal */
++#define KEY_FISHING_CHART		0x281 /* Click the button on the gimbal */
++#define KEY_SINGLE_RANGE_RADAR		0x282 /* The left focus button on the gimbal */
++#define KEY_DUAL_RANGE_RADAR		0x283 /* The right focus button on the gimbal */
++#define KEY_RADAR_OVERLAY		0x284 /* The left expose button on the gimbal */
++#define KEY_TRADITIONAL_SONAR		0x285 /* The right expose button on the gimbal */
++#define KEY_CLEARVU_SONAR		0x286 /* The left shutter button on the gimbal */
++#define KEY_SIDEVU_SONAR		0x287 /* The right shutter button on the gimbal */
++#define KEY_NAV_INFO		0x288 /* The left aperture button on the gimbal */
++#define KEY_BRIGHTNESS_MENU		0x289 /* The right aperture button on the gimbal */
 +
  /* We avoid low common keys in module aliases so they don't get huge. */
  #define KEY_MIN_INTERESTING	KEY_MUTE
--#define KEY_MAX			0x2ff
-+#define KEY_MAX			0x309
+ #define KEY_MAX			0x2ff
  #define KEY_CNT			(KEY_MAX+1)
  
  /*
@@ -1527,15 +1525,15 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
 +	case KEY_MENU:
 +	case KEY_VOLUMEDOWN:
 +	case KEY_VOLUMEUP:
-+	case KEY_PTZ_CLICK:
-+	case KEY_PTZ_FOCUS_LEFT:
-+	case KEY_PTZ_FOCUS_RIGHT:
-+	case KEY_PTZ_EXPOSE_LEFT:
-+	case KEY_PTZ_EXPOSE_RIGHT:
-+	case KEY_PTZ_SHUTTER_LEFT:
-+	case KEY_PTZ_SHUTTER_RIGHT:
-+	case KEY_PTZ_APERTURE_LEFT:
-+	case KEY_PTZ_APERTURE_RIGHT:
++	case KEY_FISHING_CHART:
++	case KEY_SINGLE_RANGE_RADAR:
++	case KEY_DUAL_RANGE_RADAR:
++	case KEY_RADAR_OVERLAY:
++	case KEY_TRADITIONAL_SONAR:
++	case KEY_CLEARVU_SONAR:
++	case KEY_SIDEVU_SONAR:
++	case KEY_NAV_INFO:
++	case KEY_BRIGHTNESS_MENU:
 +		evdev_log_libinput_info(dispatch->device, "Reported code:%d,and value:%d", e->code, e->value);
 +		break;
 +	}
@@ -1775,7 +1773,7 @@ diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
 +		return KEY_TYPE_KEY;
 +	if (code == KEY_BACK_PANEL_DOUBLE_TAP || code == KEY_PEELING)
 +		return KEY_TYPE_KEY;
-+	if (code >= KEY_PTZ_CLICK && code <= KEY_PTZ_APERTURE_RIGHT)
++	if (code >= KEY_FISHING_CHART && code <= KEY_BRIGHTNESS_MENU)
 +		return KEY_TYPE_KEY;
  	return KEY_TYPE_NONE;
  }
