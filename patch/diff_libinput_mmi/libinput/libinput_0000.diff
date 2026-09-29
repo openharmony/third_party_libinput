@@ -1178,7 +1178,7 @@ diff -Naur old/include/linux/freebsd/input-event-codes.h new/include/linux/freeb
  
  /* Code 255 is reserved for special needs of AT keyboard driver */
  
-@@ -772,6 +773,18 @@
+@@ -772,9 +773,31 @@
  #define BTN_TRIGGER_HAPPY39		0x2e6
  #define BTN_TRIGGER_HAPPY40		0x2e7
  
@@ -1194,10 +1194,23 @@ diff -Naur old/include/linux/freebsd/input-event-codes.h new/include/linux/freeb
 +
 +#define KEY_PEELING		0x2f6
 +
++#define KEY_FISHING_CHART		0x281 /* Click the button on the gimbal */
++#define KEY_SINGLE_RANGE_RADAR		0x282 /* The left focus button on the gimbal */
++#define KEY_DUAL_RANGE_RADAR		0x283 /* The right focus button on the gimbal */
++#define KEY_RADAR_OVERLAY		0x284 /* The left expose button on the gimbal */
++#define KEY_TRADITIONAL_SONAR		0x285 /* The right expose button on the gimbal */
++#define KEY_CLEARVU_SONAR		0x286 /* The left shutter button on the gimbal */
++#define KEY_SIDEVU_SONAR		0x287 /* The right shutter button on the gimbal */
++#define KEY_NAV_INFO		0x288 /* The left aperture button on the gimbal */
++#define KEY_BRIGHTNESS_MENU		0x289 /* The right aperture button on the gimbal */
++
  /* We avoid low common keys in module aliases so they don't get huge. */
  #define KEY_MIN_INTERESTING	KEY_MUTE
  #define KEY_MAX			0x2ff
-@@ -834,8 +847,10 @@
+ #define KEY_CNT			(KEY_MAX+1)
+ 
+ /*
+@@ -834,8 +857,10 @@
  #define ABS_TOOL_WIDTH		0x1c
  
  #define ABS_VOLUME		0x20
@@ -1209,7 +1222,7 @@ diff -Naur old/include/linux/freebsd/input-event-codes.h new/include/linux/freeb
  
  /*
   * 0x2e is reserved and should not be used in input drivers.
-@@ -889,7 +904,8 @@
+@@ -889,7 +914,8 @@
  #define SW_MUTE_DEVICE		0x0e  /* set = device disabled */
  #define SW_PEN_INSERTED		0x0f  /* set = pen inserted */
  #define SW_MACHINE_COVER	0x10  /* set = cover closed */
@@ -1232,7 +1245,7 @@ diff -Naur old/include/linux/linux/input-event-codes.h new/include/linux/linux/i
  
  /* Code 255 is reserved for special needs of AT keyboard driver */
  
-@@ -772,6 +773,18 @@
+@@ -772,9 +773,31 @@
  #define BTN_TRIGGER_HAPPY39		0x2e6
  #define BTN_TRIGGER_HAPPY40		0x2e7
  
@@ -1248,10 +1261,23 @@ diff -Naur old/include/linux/linux/input-event-codes.h new/include/linux/linux/i
 +
 +#define KEY_PEELING		0x2f6
 +
++#define KEY_FISHING_CHART		0x281 /* Click the button on the gimbal */
++#define KEY_SINGLE_RANGE_RADAR		0x282 /* The left focus button on the gimbal */
++#define KEY_DUAL_RANGE_RADAR		0x283 /* The right focus button on the gimbal */
++#define KEY_RADAR_OVERLAY		0x284 /* The left expose button on the gimbal */
++#define KEY_TRADITIONAL_SONAR		0x285 /* The right expose button on the gimbal */
++#define KEY_CLEARVU_SONAR		0x286 /* The left shutter button on the gimbal */
++#define KEY_SIDEVU_SONAR		0x287 /* The right shutter button on the gimbal */
++#define KEY_NAV_INFO		0x288 /* The left aperture button on the gimbal */
++#define KEY_BRIGHTNESS_MENU		0x289 /* The right aperture button on the gimbal */
++
  /* We avoid low common keys in module aliases so they don't get huge. */
  #define KEY_MIN_INTERESTING	KEY_MUTE
  #define KEY_MAX			0x2ff
-@@ -834,8 +847,10 @@
+ #define KEY_CNT			(KEY_MAX+1)
+ 
+ /*
+@@ -834,8 +857,10 @@
  #define ABS_TOOL_WIDTH		0x1c
  
  #define ABS_VOLUME		0x20
@@ -1263,7 +1289,7 @@ diff -Naur old/include/linux/linux/input-event-codes.h new/include/linux/linux/i
  
  /*
   * 0x2e is reserved and should not be used in input drivers.
-@@ -889,7 +904,8 @@
+@@ -889,7 +914,8 @@
  #define SW_MUTE_DEVICE		0x0e  /* set = device disabled */
  #define SW_PEN_INSERTED		0x0f  /* set = pen inserted */
  #define SW_MACHINE_COVER	0x10  /* set = cover closed */
@@ -1483,7 +1509,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  
  	return true;
  }
-@@ -469,6 +525,21 @@
+@@ -469,6 +525,30 @@
  		     struct input_event *e, uint64_t time)
  {
  	enum key_type type;
@@ -1499,13 +1525,22 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
 +	case KEY_MENU:
 +	case KEY_VOLUMEDOWN:
 +	case KEY_VOLUMEUP:
++	case KEY_FISHING_CHART:
++	case KEY_SINGLE_RANGE_RADAR:
++	case KEY_DUAL_RANGE_RADAR:
++	case KEY_RADAR_OVERLAY:
++	case KEY_TRADITIONAL_SONAR:
++	case KEY_CLEARVU_SONAR:
++	case KEY_SIDEVU_SONAR:
++	case KEY_NAV_INFO:
++	case KEY_BRIGHTNESS_MENU:
 +		evdev_log_libinput_info(dispatch->device, "Reported code:%d,and value:%d", e->code, e->value);
 +		break;
 +	}
  
  	/* ignore kernel key repeat */
  	if (e->value == 2)
-@@ -494,9 +565,13 @@
+@@ -494,9 +574,13 @@
  	case KEY_TYPE_KEY:
  	case KEY_TYPE_BUTTON:
  		if ((e->value && hw_is_key_down(dispatch, e->code)) ||
@@ -1521,7 +1556,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  		dispatch->pending_event |= EVDEV_KEY;
  		break;
  	}
-@@ -528,6 +603,14 @@
+@@ -528,6 +612,14 @@
  {
  	struct mt_slot *slot = &dispatch->mt.slots[dispatch->mt.slot];
  
@@ -1536,7 +1571,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  	if (e->code == ABS_MT_SLOT) {
  		if ((size_t)e->value >= dispatch->mt.slots_len) {
  			evdev_log_bug_libinput(device,
-@@ -541,6 +624,16 @@
+@@ -541,6 +633,16 @@
  	}
  
  	switch (e->code) {
@@ -1553,7 +1588,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  	case ABS_MT_TRACKING_ID:
  		if (e->value >= 0) {
  			dispatch->pending_event |= EVDEV_ABSOLUTE_MT;
-@@ -598,8 +691,49 @@
+@@ -598,8 +700,49 @@
  			break;
  		}
  		dispatch->pending_event |= EVDEV_ABSOLUTE_MT;
@@ -1603,7 +1638,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  	}
  }
  
-@@ -608,6 +742,11 @@
+@@ -608,6 +751,11 @@
  				 struct evdev_device *device,
  				 struct input_event *e)
  {
@@ -1615,7 +1650,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  	switch (e->code) {
  	case ABS_X:
  		evdev_device_check_abs_axis_range(device, e->code, e->value);
-@@ -619,6 +758,10 @@
+@@ -619,6 +767,10 @@
  		dispatch->abs.point.y = e->value;
  		dispatch->pending_event |= EVDEV_ABSOLUTE_MOTION;
  		break;
@@ -1626,7 +1661,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  	}
  }
  
-@@ -920,6 +1063,10 @@
+@@ -920,6 +1072,10 @@
  			fallback_flush_absolute_motion(dispatch,
  						       device,
  						       time);
@@ -1637,7 +1672,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  		}
  	}
  
-@@ -1556,6 +1703,8 @@
+@@ -1556,6 +1712,8 @@
  
  	for (slot = 0; slot < num_slots; ++slot) {
  		slots[slot].seat_slot = -1;
@@ -1646,7 +1681,7 @@ diff -Naur old/src/evdev-fallback.c new/src/evdev-fallback.c
  
  		if (evdev_need_mtdev(device))
  			continue;
-@@ -1718,3 +1867,11 @@
+@@ -1718,3 +1876,11 @@
  
  	return &dispatch->base;
  }
@@ -1710,7 +1745,7 @@ diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
  	switch (code) {
  	case BTN_TOOL_PEN:
  	case BTN_TOOL_RUBBER:
-@@ -222,6 +243,30 @@
+@@ -222,6 +243,32 @@
  		return KEY_TYPE_KEY;
  	if (code >= BTN_TRIGGER_HAPPY && code <= BTN_TRIGGER_HAPPY40)
  		return KEY_TYPE_BUTTON;
@@ -1737,6 +1772,8 @@ diff -Naur old/src/evdev-fallback.h new/src/evdev-fallback.h
 +	if (code == KEY_FINGERPRINT_SLIDE_UP || code == KEY_FINGERPRINT_SLIDE_DOWN)
 +		return KEY_TYPE_KEY;
 +	if (code == KEY_BACK_PANEL_DOUBLE_TAP || code == KEY_PEELING)
++		return KEY_TYPE_KEY;
++	if (code >= KEY_FISHING_CHART && code <= KEY_BRIGHTNESS_MENU)
 +		return KEY_TYPE_KEY;
  	return KEY_TYPE_NONE;
  }
